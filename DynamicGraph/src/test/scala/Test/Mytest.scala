@@ -1,6 +1,7 @@
 package Test
 
 import org.junit.Test
+import org.neo4j.values.storable.{ArrayValue, ByteValue, LongValue, NoValue, StringValue, Value, Values}
 
 class Mytest extends{
   @Test
@@ -19,5 +20,26 @@ class Mytest extends{
     println(s2)
 
   }
+  def value2byte(value: Value): Unit ={
+    value match{
+      case value: ArrayValue =>
+      case value: NoValue =>
+      case value:LongValue =>
+      case value: StringValue =>
+
+    }
+  }
+
+  @Test
+  def testValue(): Unit ={
+    //val value = new LongValue(100l)
+    val v = Values.of("hello world")
+    val k = v
+    //ByteArrayValue
+    //Values.
+
+
+  }
+
 
 }
