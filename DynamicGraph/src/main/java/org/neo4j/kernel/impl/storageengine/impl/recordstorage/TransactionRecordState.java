@@ -11,6 +11,9 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
+
+import DynamicGraph.store.Node.NodeVersionStore;
+import DynamicGraph.store.record.DynamicVersionRecord;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -63,7 +66,7 @@ public class TransactionRecordState implements RecordState {
     private static final Command[] EMPTY_COMMANDS = new Command[0];
     private final NeoStores neoStores;
     private final IntegrityValidator integrityValidator;
-    private final NodeStore nodeStore;
+    private final NodeVersionStore nodeStore;
     private final RelationshipStore relationshipStore;
     private final PropertyStore propertyStore;
     private final RecordStore<RelationshipGroupRecord> relationshipGroupStore;
@@ -280,7 +283,7 @@ public class TransactionRecordState implements RecordState {
         }
     }
 
-    private Collection<DynamicRecord> markNotInUse(Collection<DynamicRecord> dynamicLabelRecords) {
+    private Collection<DynamicVersionRecord> markNotInUse(Collection<DynamicVersionRecord> dynamicLabelRecords) {
         Iterator var2 = dynamicLabelRecords.iterator();
 
         while(var2.hasNext()) {

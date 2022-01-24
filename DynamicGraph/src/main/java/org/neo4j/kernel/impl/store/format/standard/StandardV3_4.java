@@ -5,7 +5,7 @@
 
 package org.neo4j.kernel.impl.store.format.standard;
 
-import DynamicGraph.store.DynamicNodeRecordFormat;
+import DynamicGraph.store.Node.NodeVersionRecordFormat;
 import org.neo4j.kernel.impl.store.format.BaseRecordFormats;
 import org.neo4j.kernel.impl.store.format.Capability;
 import org.neo4j.kernel.impl.store.format.FormatFamily;
@@ -32,7 +32,7 @@ public class StandardV3_4 extends BaseRecordFormats {
     //nodeRecordFormat-> DynamicNodeRecordFormat
 
     public RecordFormat<NodeRecord> node() {
-        return new DynamicNodeRecordFormat();
+        return new NodeVersionRecordFormat();
     }
 
     public RecordFormat<RelationshipGroupRecord> relationshipGroup() {

@@ -10,13 +10,15 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+
+import DynamicGraph.store.record.DynamicVersionRecord;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
 
 public class NodeRecord extends PrimitiveRecord {
     private long nextRel;
     private long labels;
-    private Collection<DynamicRecord> dynamicLabelRecords;
+    private Collection<DynamicVersionRecord> dynamicLabelRecords;
     private boolean isLight;
     private boolean dense;
     private long version;
@@ -79,7 +81,7 @@ public class NodeRecord extends PrimitiveRecord {
         this.nextRel = nextRel;
     }
 
-    public void setLabelField(long labels, Collection<DynamicRecord> dynamicRecords) {
+    public void setLabelField(long labels, Collection<DynamicVersionRecord> dynamicRecords) {
         this.labels = labels;
         this.dynamicLabelRecords = dynamicRecords;
         this.isLight = dynamicRecords.isEmpty();
@@ -93,11 +95,11 @@ public class NodeRecord extends PrimitiveRecord {
         return this.isLight;
     }
 
-    public Collection<DynamicRecord> getDynamicLabelRecords() {
+    public Collection<DynamicVersionRecord> getDynamicLabelRecords() {
         return this.dynamicLabelRecords;
     }
 
-    public Iterable<DynamicRecord> getUsedDynamicLabelRecords() {
+    public Iterable<DynamicVersionRecord> getUsedDynamicLabelRecords() {
         return Iterables.filter(AbstractBaseRecord::inUse, this.dynamicLabelRecords);
     }
 
@@ -123,11 +125,11 @@ public class NodeRecord extends PrimitiveRecord {
         NodeRecord clone = (new NodeRecord(this.getId())).initialize(this.inUse(), this.nextProp, this.dense, this.nextRel, this.labels);
         clone.isLight = this.isLight;
         if (this.dynamicLabelRecords.size() > 0) {
-            List<DynamicRecord> clonedLabelRecords = new ArrayList(this.dynamicLabelRecords.size());
+            List<DynamicVersionRecord> clonedLabelRecords = new ArrayList(this.dynamicLabelRecords.size());
             Iterator var3 = this.dynamicLabelRecords.iterator();
 
             while(var3.hasNext()) {
-                DynamicRecord labelRecord = (DynamicRecord)var3.next();
+                DynamicVersionRecord labelRecord = (DynamicVersionRecord)var3.next();
                 clonedLabelRecords.add(labelRecord.clone());
             }
 

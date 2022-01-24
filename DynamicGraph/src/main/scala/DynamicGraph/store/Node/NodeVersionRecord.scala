@@ -1,12 +1,11 @@
-package DynamicGraph.store
+package DynamicGraph.store.Node
 
-import java.util
-
-import org.neo4j.kernel.impl.store.{NodeLabelsField, record}
-import org.neo4j.kernel.impl.store.record.{DynamicRecord, NodeRecord, PrimitiveRecord, PropertyRecord, Record}
+import DynamicGraph.store.record.DynamicVersionRecord
+import org.neo4j.kernel.impl.store.NodeLabelsField
+import org.neo4j.kernel.impl.store.record.{DynamicRecord, NodeRecord, PropertyRecord, Record}
 
 import scala.collection.JavaConverters._
-class DynamicNodeRecord(id: Long) extends NodeRecord(id){
+class NodeVersionRecord(id: Long) extends NodeRecord(id){
 
   var nextRel: Long = 0
   var labels: Long = 0
@@ -14,7 +13,7 @@ class DynamicNodeRecord(id: Long) extends NodeRecord(id){
   var islight: Boolean = false
   var dense: Boolean = false
 
-  override def initialize(inUse: Boolean, nextProp: Long, dense: Boolean, nextRel: Long, labels: Long): DynamicNodeRecord ={
+  override def initialize(inUse: Boolean, nextProp: Long, dense: Boolean, nextRel: Long, labels: Long): NodeVersionRecord ={
     super.initialize(inUse,nextProp)
     this.nextRel = nextRel
     this.dense = dense
@@ -69,14 +68,14 @@ class DynamicNodeRecord(id: Long) extends NodeRecord(id){
     s"Node[${this.getId},used=${this.inUse()},${denseInfo},prop=${this.getNextProp},labels=${NodeLabelsField.parseLabelsField(this)},${lightHeavyInfo},secondaryUnitId=${this.getSecondaryUnitId}]"
   }
 
-  override def clone(): DynamicNodeRecord = {
+/*  override def clone(): DynamicVersionRecord = {
     val nodeRecord = super.clone()
-    val clone = new DynamicNodeRecord(nodeRecord.getId)
-    clone.initialize(this.inUse(),this.nextProp,this.dense,this.nextRel,this.labels)
+    val clone = new DynamicVersionRecord(nodeRecord.getId)
+    clone.initialize(this.inUse(),this.nextProp,this.dense,this.nextRel,this.labels,this.getVersion)
     clone.dynamicLabelRecords = nodeRecord.getDynamicLabelRecords.asScala
     clone.setSecondaryUnitId(this.getSecondaryUnitId)
     clone
-  }
+  }*/
 
 }
 

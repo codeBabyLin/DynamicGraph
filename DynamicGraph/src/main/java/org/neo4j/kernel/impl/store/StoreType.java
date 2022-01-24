@@ -8,10 +8,18 @@ package org.neo4j.kernel.impl.store;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Optional;
+
+import DynamicGraph.store.DynamicNeoStores;
 import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 
 public enum StoreType {
+    NODE_VERSION_LABEL(DatabaseFile.Node_VERSION_LABEL_STORE,true,false){
+        public CommonAbstractStore open(NeoStores neoStores) {
+            DynamicNeoStores dns = (DynamicNeoStores)neoStores;
+            return dns.createNodeVersionLabelStore();
+        }
+    },
     NODE_LABEL(DatabaseFile.NODE_LABEL_STORE, true, false) {
         public CommonAbstractStore open(NeoStores neoStores) {
             return neoStores.createNodeLabelStore();

@@ -30,7 +30,8 @@ public enum DatabaseFile {
     COUNTS_STORE_A(false, new String[]{"neostore.counts.db.a"}),
     COUNTS_STORE_B(false, new String[]{"neostore.counts.db.b"}),
     METADATA_STORE("neostore"),
-    LABEL_SCAN_STORE(false, new String[]{"neostore.labelscanstore.db"});
+    LABEL_SCAN_STORE(false, new String[]{"neostore.labelscanstore.db"}),
+    Node_VERSION_LABEL_STORE("neostore.nodestore.db.versionlabels");
 
     private final List<String> names;
     private final boolean hasIdFile;

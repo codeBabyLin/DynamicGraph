@@ -2,6 +2,7 @@ package DynamicGraph
 
 import java.util
 
+import DynamicGraph.serialization.Value2Byte
 import org.neo4j.graphdb.{ConstraintViolationException, NotFoundException, TransactionTerminatedException}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, TokenRead}
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernelException
@@ -29,12 +30,27 @@ class DynamicNodeProxyM1(spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(s
     else transaction
   }
 
+
+
   def setVersionProperty(key: String,value: Any, version: String): Unit ={
-    setProperty(version.concat(key),value)
+    var value1: AnyRef = null
+    //var flag = true
+    try{
+      value1 = this.getProperty(key)
+    }
+    catch {
+      case e: NotFoundException =>
+    }
+    finally {
+      var prop: Map[Int, Any] = Map.empty
+      if (value1!=null) prop = Value2Byte.read(value1.asInstanceOf[Array[Byte]])
+      prop += (version.toInt -> value)
+      this.setProperty(key, Value2Byte.write(prop))
+    }
   }
 
   def getVersionProterty(key: String,version: String): AnyRef ={
-    getProperty(version.concat(key))
+    Value2Byte.read(this.getProperty(key).asInstanceOf[Array[Byte]]).get(version.toInt)
   }
 
   def getVersionAllProperties(version: String): util.Map[String, AnyRef] = {

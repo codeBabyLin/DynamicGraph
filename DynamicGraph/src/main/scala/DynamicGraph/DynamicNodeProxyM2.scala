@@ -1,9 +1,10 @@
 package DynamicGraph
 
 import java.util
-import java.util.Map
+//import java.util.Map
 
 import Common.Version
+import DynamicGraph.serialization.Value2Byte
 import org.neo4j.graphdb.{ConstraintViolationException, NotFoundException, TransactionTerminatedException}
 import org.neo4j.internal.kernel.api.{NodeCursor, PropertyCursor, Read, TokenRead}
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernelException
@@ -30,6 +31,31 @@ class DynamicNodeProxyM2 (spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(
       throw new TransactionTerminatedException(terminationReason)
     }
     else transaction
+  }
+
+  def setVersionProperty(key: String,value: Any, version: String): Unit ={
+    var value1: Any = null
+    //var flag = true
+    try{
+      value1 = this.getProperty(key)
+    }
+    catch {
+      case e: NotFoundException =>
+    }
+    finally {
+      var prop: Map[Int, Any] = Map.empty
+      if (value1!=null) prop = Value2Byte.read(value1.asInstanceOf[Array[Byte]])
+      prop += version.toInt -> value
+      this.setProperty(key, Value2Byte.write(prop))
+    }
+  }
+
+  def getVersionProterty(key: String,version: String): Any ={
+    val temp = this.getProperty(key)
+    val value = temp.asInstanceOf[Array[Byte]]
+    val pmap = Value2Byte.read(value)
+    pmap(version.toInt)
+    //Value2Byte.read(this.getProperty(key).asInstanceOf[Array[Byte]])(version.toInt)
   }
 
   def setNodeVersion(version: Long): Unit ={

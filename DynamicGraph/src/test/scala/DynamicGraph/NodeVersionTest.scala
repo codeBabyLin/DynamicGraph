@@ -2,7 +2,7 @@ package DynamicGraph
 
 import java.io.File
 
-import org.junit.{After, Before, Test}
+import org.junit.{After, Assert, Before, Test}
 
 import org.neo4j.graphdb.{GraphDatabaseService, Label}
 import org.neo4j.graphdb.factory.GraphDatabaseFactory
@@ -39,33 +39,24 @@ class NodeVersionTest {
   def testNodeVersionFunc(): Unit ={
     val path = "F:\\DynamicGraphStore"
     val dataBaseDir = new File(path,"data")
-
     graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dataBaseDir)
     registerShutdownHook(graphDb)
     var tx = graphDb.beginTx()
     var node = graphDb.createNode().asInstanceOf[DynamicNodeProxyM2]
     val nodeId = node.getId
-    //node.setProperty("name","LiBai")
-    //node.setNodeVersion(100)
-
+    node.setProperty("name","LiBai")
+    node.setNodeVersion(100)
     tx.success()
     tx.close()
-
     tx = graphDb.beginTx()
     node = graphDb.getNodeById(nodeId).asInstanceOf[DynamicNodeProxyM2]
-
-
+    Assert.assertEquals(nodeId,node.getId)
+    Assert.assertEquals(100,node.getNodeVersion())
     println(node.getId)
     println(node.getAllProperties)
-    //println(node.getDegree)
     println(node.getNodeVersion())
-
     tx.close()
-
     graphDb.shutdown()
-
-
-
   }
 
   @Test
@@ -120,6 +111,77 @@ class NodeVersionTest {
 
     graphDb.shutdown()
   }
+
+  @Test
+  def testNodeversionProperties(): Unit ={
+    val path = "F:\\DynamicGraphStore"
+    val dataBaseDir = new File(path,"data")
+
+    graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dataBaseDir)
+    registerShutdownHook(graphDb)
+    //t1
+    var tx = graphDb.beginTx()
+    var node = graphDb.createNode().asInstanceOf[DynamicNodeProxyM2]
+    node.setVersionProperty("age",18,"1001")
+    node.setVersionProperty("year",2021,"1001")
+    val nodeId = node.getId
+    //println(nodeId)
+    tx.success()
+    tx.close()
+    //t2
+    tx = graphDb.beginTx()
+    node = graphDb.getNodeById(nodeId).asInstanceOf[DynamicNodeProxyM2]
+    node.setVersionProperty("age",20,"10086")
+    node.setVersionProperty("year",2022,"10086")
+    //tx.failure()
+      tx.success()
+    tx.close()
+    //t3
+    tx = graphDb.beginTx()
+    node = graphDb.getNodeById(nodeId).asInstanceOf[DynamicNodeProxyM2]
+    println(node.getVersionProterty("age","1001"))
+    println(node.getVersionProterty("year","10086"))
+    //println(node.getAllProperties)
+    graphDb.shutdown()
+  }
+
+
+  @Test
+  def testNodeLabelVersion(): Unit ={
+    val path = "F:\\DynamicGraphStore"
+    val dataBaseDir = new File(path,"data")
+
+    graphDb = new GraphDatabaseFactory().newEmbeddedDatabase(dataBaseDir)
+    registerShutdownHook(graphDb)
+
+    var tx = graphDb.beginTx()
+    var node = graphDb.createNode().asInstanceOf[DynamicNodeProxyM2]
+    val nodeId = node.getId
+    val label1 = new Label {
+      override def name(): String = "student"
+    }
+    val label2 = new Label {
+      override def name(): String = "boy"
+    }
+    node.addLabel(label1)
+    //node.addLabel(label2)
+    tx.success()
+    tx.close()
+
+    tx =  graphDb.beginTx()
+    node = graphDb.getNodeById(nodeId).asInstanceOf[DynamicNodeProxyM2]
+
+    node.addLabel(label2)
+    tx.success()
+    tx.close()
+
+    tx =  graphDb.beginTx()
+    node = graphDb.getNodeById(nodeId).asInstanceOf[DynamicNodeProxyM2]
+    node.getLabels.forEach(println)
+
+    graphDb.shutdown()
+  }
+
 
 
   @After

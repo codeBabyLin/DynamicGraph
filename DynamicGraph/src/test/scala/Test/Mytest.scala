@@ -1,5 +1,6 @@
 package Test
 
+import io.netty.buffer.{ByteBuf, Unpooled}
 import org.junit.Test
 import org.neo4j.values.storable.{ArrayValue, ByteValue, LongValue, NoValue, StringValue, Value, Values}
 
@@ -21,6 +22,7 @@ class Mytest extends{
 
   }
   def value2byte(value: Value): Unit ={
+    val byteBuf: ByteBuf = Unpooled.buffer()
     value match{
       case value: ArrayValue =>
       case value: NoValue =>
@@ -32,11 +34,20 @@ class Mytest extends{
 
   @Test
   def testValue(): Unit ={
-    //val value = new LongValue(100l)
+
+
+
     val v = Values.of("hello world")
     val k = v
-    //ByteArrayValue
-    //Values.
+    val l: Long = 19
+    val sk = BigInt(212222).toByteArray
+    val test = Values.of(sk)
+    println(v)
+    println(test)
+
+    println(BigInt(10).toByteArray)
+    println(1.toByte)
+
 
 
   }

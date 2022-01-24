@@ -12,6 +12,8 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Supplier;
+
+import DynamicGraph.store.DynamicstoreFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.collection.Iterators;
 import org.neo4j.index.internal.gbptree.RecoveryCleanupWorkCollector;
@@ -139,7 +141,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle {
         this.constraintSemantics = constraintSemantics;
         this.explicitIndexTransactionOrdering = explicitIndexTransactionOrdering;
         this.idController = idController;
-        StoreFactory factory = new StoreFactory(databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider, versionContextSupplier);
+        DynamicstoreFactory factory = new DynamicstoreFactory(databaseLayout, config, idGeneratorFactory, pageCache, fs, logProvider, versionContextSupplier);
         this.neoStores = factory.openAllNeoStores(true);
 
         try {
@@ -156,10 +158,11 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle {
             this.cacheAccess = new BridgingCacheAccess(this.schemaCache, schemaState, tokenHolders);
             this.explicitIndexApplierLookup = new Direct(explicitIndexProvider);
             LabelScanStore var10003 = this.labelScanStore;
-            Class<?> df = var10003.getClass();
+            //Class<?> df = var10003.getClass();
             //this.labelScanStoreSync = new WorkSync(var10003::newWriter);
+            Supplier<LabelScanWriter> labelSS = var10003::newWriter;
 
-            this.labelScanStoreSync = new WorkSync(var10003.getClass().getMethod("newWriter"));
+            this.labelScanStoreSync = new WorkSync(labelSS);
             this.commandReaderFactory = new RecordStorageCommandReaderFactory();
             this.indexUpdatesSync = new WorkSync(this.indexingService);
             this.denseNodeThreshold = (Integer)config.get(GraphDatabaseSettings.dense_node_threshold);
