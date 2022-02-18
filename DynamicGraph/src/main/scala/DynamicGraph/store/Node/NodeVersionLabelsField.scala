@@ -21,9 +21,9 @@ trait NodeVersionLabels{
 
 object InlineNodeVersionLabels{
 
-  def tryInlineInNodeRecord(node: NodeRecord, ids: Array[Long], changedDynamicRecords: util.Collection[DynamicRecord]): Boolean = {
+/*  def tryInlineInNodeRecord(node: NodeRecord, ids: Array[Long], changedDynamicRecords: util.Collection[DynamicRecord]): Boolean = {
     if(ids.length > 7)
-  }
+  }*/
 
   def inlineValues(values: Array[Long], maxBitsPerLabel: Int, target: Bits):Boolean = {
     val limit: Long = 1L << maxBitsPerLabel
@@ -86,9 +86,9 @@ object NodeVersionLabelsField{
 
 
 
-  def parseLabelsField (node: NodeRecord): NodeLabels ={
+/*  def parseLabelsField (node: NodeRecord): NodeLabels ={
     val labelField = node.getLabelField
-  }
+  }*/
   def isSane(labelIds: Array[Long]): Boolean = {
     var issane: Boolean = true
     var prev:Long = -1L

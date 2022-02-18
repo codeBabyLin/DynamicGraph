@@ -39,7 +39,7 @@ class NodeVersionStore(file: File,
                        recordFormats: RecordFormats,
                        openOptions: Array[OpenOption])
   extends CommonAbstractStore[NodeRecord,NoStoreHeader](file,idFile,config,IdType.NODE,idGeneratorFactory,pageCache,logProvider,"NodeVersionStore",
-    recordFormats.node(),NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT,recordFormats.storeVersion(),openOptions:_*){
+    recordFormats.node(),NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT,recordFormats.storeVersion(),openOptions:_*) with NodeStore{
   final val TYPE_DESCRIPTOR: String = "NodeVersionStore"
   //final val dynamicVersionLabelStore: DynamicVersionArrayStore = dynamicVersionLabelStore
   override def accept[FAILURE <: Exception](processor: RecordStore.Processor[FAILURE], record: NodeRecord): Unit = {
@@ -52,7 +52,7 @@ class NodeVersionStore(file: File,
     }
   }
 
-  def ensureHeavy(node: NodeRecord, firstDynamicLabelRecord: Long): Unit ={
+  override def ensureHeavy(node: NodeRecord, firstDynamicLabelRecord: Long): Unit ={
     if(node.isLight){
       node.setLabelField(node.getLabelField,this.dynamicVersionLabelStore.getRecords(firstDynamicLabelRecord,RecordLoad.NORMAL))
     }
