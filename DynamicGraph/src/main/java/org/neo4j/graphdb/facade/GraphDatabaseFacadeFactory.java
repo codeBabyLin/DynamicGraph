@@ -3,7 +3,7 @@ import java.io.File;
 import java.util.Map;
 import java.util.function.Function;
 
-import DynamicGraph.DynamicGraphDatabaseFacade;
+import cn.DynamicGraph.DynamicGraphDatabaseFacade;
 import org.neo4j.bolt.BoltServer;
 import org.neo4j.dbms.database.DatabaseManager;
 import org.neo4j.graphdb.DependencyResolver;
@@ -58,9 +58,14 @@ public class GraphDatabaseFacadeFactory {
         this.editionFactory = editionFactory;
     }
 
+    //Dynamicgraph method
+    //*******************
     public GraphDatabaseFacade newFacade(File storeDir, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies) {
         return this.initFacade(storeDir, config, dependencies, new DynamicGraphDatabaseFacade());
     }
+
+    //Dynamicgraph method
+    //*******************
 
     public GraphDatabaseFacade initFacade(File storeDir, Map<String, String> params, GraphDatabaseFacadeFactory.Dependencies dependencies, GraphDatabaseFacade graphDatabaseFacade) {
         return this.initFacade(storeDir, Config.defaults(params), dependencies, graphDatabaseFacade);

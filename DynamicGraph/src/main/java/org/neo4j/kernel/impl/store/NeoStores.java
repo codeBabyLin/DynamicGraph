@@ -12,8 +12,9 @@ import java.nio.file.OpenOption;
 import java.util.Iterator;
 import java.util.function.Predicate;
 
-import DynamicGraph.store.Node.NodeVersionStore;
-import DynamicGraph.store.versionStore.DynamicVersionArrayStore;
+import cn.DynamicGraph.kernel.impl.store.NodeVersionStore;
+import cn.DynamicGraph.kernel.impl.store.format.VersionRecordFormatsImpl;
+import cn.DynamicGraph.store.versionStore.DynamicVersionArrayStore;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.helpers.ArrayUtil;
@@ -242,12 +243,12 @@ public class NeoStores implements AutoCloseable {
         return (MetaDataStore)this.getStore(StoreType.META_DATA);
     }
 
-   /* public NodeStore getNodeStore() {
+    public NodeStore getNodeStore() {
         return (NodeStore)this.getStore(StoreType.NODE);
-    }*/
-   public NodeVersionStore getNodeStore(){
+    }
+/*   public NodeVersionStore getNodeStore(){
        return (NodeVersionStore)this.getStore(StoreType.NODE);
-   }
+   }*/
 
     private DynamicArrayStore getNodeLabelStore() {
         return (DynamicArrayStore)this.getStore(StoreType.NODE_LABEL);
@@ -380,7 +381,7 @@ public class NeoStores implements AutoCloseable {
     //NodeStore -> DynamicNodeStore
     CommonAbstractStore createNodeStore() {
         //return this.initialize(new NodeStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicArrayStore)this.getOrCreateStore(StoreType.NODE_LABEL), this.recordFormats, this.openOptions));
-        return this.initialize(new NodeVersionStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicVersionArrayStore)this.getOrCreateStore(StoreType.NODE_VERSION_LABEL), this.recordFormats, this.openOptions));
+        return this.initialize(new NodeStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicArrayStore)this.getOrCreateStore(StoreType.NODE_LABEL),(DynamicVersionArrayStore)this.getOrCreateStore(StoreType.NODE_VERSION_LABEL),this.recordFormats, this.openOptions));
 
     }
 

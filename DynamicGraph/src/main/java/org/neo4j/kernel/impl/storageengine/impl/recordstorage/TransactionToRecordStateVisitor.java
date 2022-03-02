@@ -8,9 +8,11 @@ package org.neo4j.kernel.impl.storageengine.impl.recordstorage;
 import java.util.Iterator;
 import java.util.Optional;
 
-import DynamicGraph.state.DynamicRecordState;
+//import DynamicGraph.state.DynamicRecordState;
 import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.map.primitive.LongLongMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
+import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.kernel.api.exceptions.schema.DuplicateSchemaRuleException;
@@ -24,7 +26,7 @@ import org.neo4j.kernel.impl.store.SchemaStorage;
 import org.neo4j.storageengine.api.StorageProperty;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
-import org.neo4j.storageengine.api.txstate.DynamicTxStateVisitor;
+//import org.neo4j.storageengine.api.txstate.DynamicTxStateVisitor;
 import org.neo4j.storageengine.api.txstate.TxStateVisitor.Adapter;
 
 class TransactionToRecordStateVisitor extends Adapter {
@@ -64,10 +66,33 @@ class TransactionToRecordStateVisitor extends Adapter {
         this.recordState.relCreate(id, type, startNode, endNode);
     }
 
+
+    //DynamicGraph
+    //**********************************************************
+
     @Override
     public void visitNodeVersionChange(long var1, long var2) {
         this.recordState.nodeVersionChange(var1,var2);
     }
+
+    @Override
+    public void visitRelVersionChange(long var1, long var2) {
+        this.recordState.relVersionChange(var1,var2);
+    }
+
+    @Override
+    public void visitNodeVersionLabelChanges(long id, LongSet added, LongSet removed, LongLongMap labelVersionMap) throws ConstraintValidationException {
+        removed.each((label) -> {
+            this.recordState.removeLabelFromNode(label, id);
+        });
+        added.each((label) -> {
+            //this.recordState.addLabelToNode(label, id);
+            this.recordState.addVersionLabelToNode(label,id,labelVersionMap.get(label));
+        });
+    }
+
+    //DynamicGraph
+    //**********************************************************
 
     public void visitDeletedRelationship(long id) {
         this.recordState.relDelete(id);

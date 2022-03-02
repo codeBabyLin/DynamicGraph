@@ -1,24 +1,27 @@
-//
-// Source code recreated from a .class file by IntelliJ IDEA
-// (powered by Fernflower decompiler)
-//
-
 package org.neo4j.kernel.impl.store.record;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
-import DynamicGraph.store.record.DynamicVersionRecord;
+import cn.DynamicGraph.kernel.impl.store.NodeVersionLabelsField;
+import cn.DynamicGraph.store.record.DynamicVersionRecord;
+import org.eclipse.collections.api.block.procedure.primitive.LongLongProcedure;
+import org.eclipse.collections.impl.map.mutable.primitive.LongLongHashMap;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
+import org.neo4j.kernel.impl.store.record.*;
+
+import java.util.*;
 
 public class NodeRecord extends PrimitiveRecord {
     private long nextRel;
     private long labels;
-    private Collection<DynamicVersionRecord> dynamicLabelRecords;
+    private Collection<DynamicRecord> dynamicLabelRecords;
+
+    //DynamicGraph
+    //**********************************************************
+    private LongLongHashMap dynamicVersionLabels;
+    //private Collection<DynamicVersionRecord> dynamicVersionLabelRecords;
+    //DynamicGraph
+    //**********************************************************
+
     private boolean isLight;
     private boolean dense;
     private long version;
@@ -27,7 +30,7 @@ public class NodeRecord extends PrimitiveRecord {
         super(id);
     }
 
-    public NodeRecord initialize(boolean inUse, long nextProp, boolean dense, long nextRel, long labels,long version) {
+    public NodeRecord initialize(boolean inUse, long nextProp, boolean dense, long nextRel, long labels, long version) {
         this.version = version;
         return initialize(inUse,nextProp, dense, nextRel, labels);
     }
@@ -65,7 +68,7 @@ public class NodeRecord extends PrimitiveRecord {
     }
 
     public void clear() {
-        this.initialize(false, (long)Record.NO_NEXT_PROPERTY.intValue(), false, (long)Record.NO_NEXT_RELATIONSHIP.intValue(), (long)Record.NO_LABELS_FIELD.intValue());
+        this.initialize(false, (long) Record.NO_NEXT_PROPERTY.intValue(), false, (long)Record.NO_NEXT_RELATIONSHIP.intValue(), (long)Record.NO_LABELS_FIELD.intValue());
     }
 
     public long getVersion(){return this.version;}
@@ -81,7 +84,68 @@ public class NodeRecord extends PrimitiveRecord {
         this.nextRel = nextRel;
     }
 
-    public void setLabelField(long labels, Collection<DynamicVersionRecord> dynamicRecords) {
+
+    //DynamicGraph
+    //**********************************************************
+
+    public Map<Long,Long> getVersionLabelsMap(){
+        Map<Long,Long> labels = new HashMap<Long,Long>();
+        LongLongProcedure longLongProcedure = new LongLongProcedure() {
+            @Override
+            public void value(long l, long l1) {
+                labels.put(l,l1);
+            }
+        };
+        this.getVersionLabels().forEachKeyValue(longLongProcedure);
+        return labels;
+    }
+ /*   public void setVersionLabelField(long labels, Collection<DynamicVersionRecord> dynamicRecords) {
+        this.labels = labels;
+        this.dynamicVersionLabelRecords = dynamicRecords;
+        this.isLight = dynamicRecords.isEmpty();
+    }*/
+
+    public void setVersionLabelField(LongLongHashMap versionLabelsMap) {
+        //this.labels = labels;
+        //this.dynamicLabelRecords = dynamicRecords;
+        this.dynamicVersionLabels = versionLabelsMap;
+        //this.isLight = dynamicRecords.isEmpty();
+    }
+
+    public void setVersionLabelField(long labels,LongLongHashMap versionLabelsMap, Collection<DynamicVersionRecord> dynamicRecords) {
+        //this.labels = labels;
+        //this.dynamicLabelRecords = dynamicRecords;
+        this.dynamicVersionLabels = versionLabelsMap;
+        //this.isLight = dynamicRecords.isEmpty();
+    }
+
+
+    public long getVersionLabelField() {
+        return this.labels;
+    }
+
+    public LongLongHashMap getVersionLabels() {
+        if(this.dynamicVersionLabels == null){
+            this.dynamicVersionLabels = new LongLongHashMap();
+        }
+        return this.dynamicVersionLabels;
+    }
+
+
+ /*   public Collection<DynamicVersionRecord> getDynamicVersionLabelRecords() {
+        return this.dynamicVersionLabelRecords;
+    }*/
+
+  /*  public Iterable<DynamicVersionRecord> getUsedDynamicVersionLabelRecords() {
+        return Iterables.filter(AbstractBaseRecord::inUse, this.dynamicVersionLabelRecords);
+    }*/
+
+    //DynamicGraph
+    //**********************************************************
+
+
+
+    public void setLabelField(long labels, Collection<DynamicRecord> dynamicRecords) {
         this.labels = labels;
         this.dynamicLabelRecords = dynamicRecords;
         this.isLight = dynamicRecords.isEmpty();
@@ -95,11 +159,11 @@ public class NodeRecord extends PrimitiveRecord {
         return this.isLight;
     }
 
-    public Collection<DynamicVersionRecord> getDynamicLabelRecords() {
+    public Collection<DynamicRecord> getDynamicLabelRecords() {
         return this.dynamicLabelRecords;
     }
 
-    public Iterable<DynamicVersionRecord> getUsedDynamicLabelRecords() {
+    public Iterable<DynamicRecord> getUsedDynamicLabelRecords() {
         return Iterables.filter(AbstractBaseRecord::inUse, this.dynamicLabelRecords);
     }
 
@@ -125,11 +189,11 @@ public class NodeRecord extends PrimitiveRecord {
         NodeRecord clone = (new NodeRecord(this.getId())).initialize(this.inUse(), this.nextProp, this.dense, this.nextRel, this.labels);
         clone.isLight = this.isLight;
         if (this.dynamicLabelRecords.size() > 0) {
-            List<DynamicVersionRecord> clonedLabelRecords = new ArrayList(this.dynamicLabelRecords.size());
+            List<DynamicRecord> clonedLabelRecords = new ArrayList(this.dynamicLabelRecords.size());
             Iterator var3 = this.dynamicLabelRecords.iterator();
 
             while(var3.hasNext()) {
-                DynamicVersionRecord labelRecord = (DynamicVersionRecord)var3.next();
+                DynamicRecord labelRecord = (DynamicRecord)var3.next();
                 clonedLabelRecords.add(labelRecord.clone());
             }
 
@@ -140,3 +204,4 @@ public class NodeRecord extends PrimitiveRecord {
         return clone;
     }
 }
+

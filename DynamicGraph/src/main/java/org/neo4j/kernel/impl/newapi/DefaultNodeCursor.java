@@ -5,7 +5,9 @@
 
 package org.neo4j.kernel.impl.newapi;
 
+import org.eclipse.collections.api.block.procedure.primitive.LongLongProcedure;
 import org.eclipse.collections.api.iterator.LongIterator;
+import org.eclipse.collections.api.map.primitive.LongLongMap;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.factory.primitive.LongSets;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
@@ -19,6 +21,9 @@ import org.neo4j.kernel.api.txstate.TransactionState;
 import org.neo4j.kernel.impl.storageengine.impl.recordstorage.RecordNodeCursor;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 import org.neo4j.storageengine.api.txstate.LongDiffSets;
+
+import java.util.HashMap;
+import java.util.Map;
 
 class DefaultNodeCursor implements NodeCursor {
     private Read read;
@@ -104,12 +109,74 @@ class DefaultNodeCursor implements NodeCursor {
         ((DefaultRelationshipTraversalCursor)cursor).init(this.nodeReference(), this.allRelationshipsReference(), this.read);
     }
 
+    //Dynamicgraph method
+    //****************************************************************************
     @Override
     public long nodeVersion() {
 
         return this.storeCursor.nodeVersion();
     }
+    public LabelSet labels(long version) {
+        if (!this.hasChanges()) {
+            return Labels.from(this.storeCursor.labels());
+        } else {
+            TransactionState txState = this.read.txState();
+            if (txState.nodeIsAddedInThisTx(this.storeCursor.entityReference())) {
+                return Labels.from(txState.nodeStateLabelDiffSets(this.storeCursor.entityReference()).getAdded());
+            } else {
+                long[] longs = this.storeCursor.labels();
+                MutableLongSet labels = new LongHashSet();
+                long[] var4 = longs;
+                int var5 = longs.length;
 
+                for(int var6 = 0; var6 < var5; ++var6) {
+                    long labelToken = var4[var6];
+                    labels.add(labelToken);
+                }
+
+                return Labels.from(txState.augmentLabels(labels, txState.getNodeState(this.storeCursor.entityReference())));
+            }
+        }
+    }
+
+    @Override
+    public Map<Long, Long> versionLabels() {
+        if (!this.hasChanges()) {
+            return this.storeCursor.versionLabels();
+        } else {
+            TransactionState txState = this.read.txState();
+            if (txState.nodeIsAddedInThisTx(this.storeCursor.entityReference())) {
+                Map<Long,Long> labels = new HashMap<Long, Long>();
+                LongLongMap lMap = txState.nodesWithVersionLabelChanged(this.storeCursor.entityReference());
+                LongLongProcedure longLongProcedure = new LongLongProcedure() {
+                    @Override
+                    public void value(long l, long l1) {
+                        labels.put(l,l1);
+                    }
+                };
+                lMap.forEachKeyValue(longLongProcedure);
+                return labels;
+                //return (NodeStateImpl)txState.getNodeState(this.storeCursor.entityReference()).
+                //return Labels.from(txState.nodeStateLabelDiffSets(this.storeCursor.entityReference()).getAdded());
+            } else {
+               /* long[] longs = this.storeCursor.labels();
+                MutableLongSet labels = new LongHashSet();
+                long[] var4 = longs;
+                int var5 = longs.length;
+
+                for(int var6 = 0; var6 < var5; ++var6) {
+                    long labelToken = var4[var6];
+                    labels.add(labelToken);
+                }*/
+               return txState.augmentLabelsMap(this.storeCursor.versionLabels(),txState.getNodeState(this.storeCursor.entityReference()));
+                //return Labels.from(txState.augmentLabels(labels, txState.getNodeState(this.storeCursor.entityReference())));
+            }
+        }
+        //return new HashMap<Long, Long>();
+    }
+
+    //Dynamicgraph method
+    //****************************************************************************
     public void properties(PropertyCursor cursor) {
         ((DefaultPropertyCursor)cursor).initNode(this.nodeReference(), this.propertiesReference(), this.read, this.read);
     }

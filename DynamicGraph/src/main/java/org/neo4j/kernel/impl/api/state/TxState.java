@@ -13,11 +13,15 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 
 import com.sun.istack.internal.Nullable;
+import org.eclipse.collections.api.block.procedure.primitive.LongProcedure;
 import org.eclipse.collections.api.iterator.LongIterator;
+import org.eclipse.collections.api.map.primitive.LongLongMap;
+import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.api.map.primitive.MutableLongObjectMap;
 import org.eclipse.collections.api.map.primitive.MutableObjectLongMap;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.UnmodifiableMap;
+import org.eclipse.collections.impl.map.mutable.primitive.LongLongHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.LongObjectHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectLongHashMap;
 import org.neo4j.helpers.collection.Iterables;
@@ -56,8 +60,8 @@ public class TxState implements TransactionState, Home {
     private GraphStateImpl graphState;
     private MutableDiffSets<IndexDescriptor> indexChanges;
     private MutableDiffSets<ConstraintDescriptor> constraintsChanges;
-    private TxState.RemovalsCountingDiffSets nodes;
-    private TxState.RemovalsCountingDiffSets relationships;
+    private RemovalsCountingDiffSets nodes;
+    private RemovalsCountingDiffSets relationships;
     private MutableObjectLongMap<IndexBackedConstraintDescriptor> createdConstraintIndexesByConstraint;
     private Map<SchemaDescriptor, Map<ValueTuple, MutableLongDiffSets>> indexUpdates;
     private long revision;
@@ -74,6 +78,8 @@ public class TxState implements TransactionState, Home {
 /*    public void accept(TxStateVisitor visitor)throws ConstraintValidationException, CreateConstraintFailureException{
         this.accept((DynamicTxStateVisitor)visitor);
     }*/
+
+
 
     public void accept(TxStateVisitor visitor) throws ConstraintValidationException, CreateConstraintFailureException {
         if (this.nodes != null) {
@@ -111,7 +117,18 @@ public class TxState implements TransactionState, Home {
             }
             LongDiffSets labelDiffSets = node.labelDiffSets();
             if (!labelDiffSets.isEmpty()) {
-                visitor.visitNodeLabelChanges(node.getId(), labelDiffSets.getAdded(), labelDiffSets.getRemoved());
+                //DynamicGraph
+                //                //************************************************************
+
+                //visitor.visitNodeLabelChanges(node.getId(), labelDiffSets.getAdded(), labelDiffSets.getRemoved());
+
+                visitor.visitNodeVersionLabelChanges(node.getId(),labelDiffSets.getAdded(),labelDiffSets.getRemoved(),nsl.labelWithVersionMap());
+
+
+                //DynamicGraph
+                //                //************************************************************
+
+
             }
         }
 
@@ -119,6 +136,10 @@ public class TxState implements TransactionState, Home {
 
         while(var5.hasNext()) {
             RelationshipState rel = (RelationshipState)var5.next();
+            RelationshipStateImpl rsl = (RelationshipStateImpl)rel;
+            if(rsl.isVersionChanged()){
+                visitor.visitRelVersionChange(rsl.getId(),rsl.getVersion());
+            }
             visitor.visitRelPropertyChanges(rel.getId(), rel.addedProperties(), rel.changedProperties(), rel.removedProperties());
         }
 
@@ -285,10 +306,59 @@ public class TxState implements TransactionState, Home {
         this.getOrCreateNodeState(nodeId).changeProperty(propertyKeyId, newValue);
         this.dataChanged();
     }
+
+
+    //DynamicGraph method
+    //*******************
+
+
+    @Override
+    public void nodeDoAddLabelWithVersion(long nodeId, long labelId, long version) {
+        this.getOrCreateLabelStateNodeDiffSets(labelId).add(nodeId);
+        this.getOrCreateNodeStateLabelDiffSets(nodeId).add(labelId);
+        this.getOrCreateNodeStateLabelWithVersionMap(nodeId).put(labelId,version);
+        this.dataChanged();
+    }
+
     public void nodeDoChangeVersion(long nodeId, long version){
         this.getOrCreateNodeState(nodeId).setNodeVersion(version);
         this.dataChanged();
     }
+
+    @Override
+    public void relDoChangeVersion(long relId, long version) {
+        this.getOrCreateRelationshipState(relId).setVersion(version);
+    }
+
+
+    private MutableLongLongMap getOrCreateNodeStateLabelWithVersionMap(long nodeId) {
+        return this.getOrCreateNodeState(nodeId).getOrCreateLabelWithVersionMap();
+    }
+    @Override
+    public LongLongMap nodesWithVersionLabelChanged(long nodeId) {
+        return this.getOrCreateNodeStateLabelWithVersionMap(nodeId);
+    }
+
+    @Override
+    public Map<Long, Long> augmentLabelsMap(Map<Long, Long> labels, NodeState nodeState) {
+        LongDiffSets labelDiffSets = nodeState.labelDiffSets();
+        LongLongMap versionLabels = this.getOrCreateNodeStateLabelWithVersionMap(nodeState.getId());
+        if (!labelDiffSets.isEmpty()) {
+            labelDiffSets.getRemoved().forEach(labels::remove);
+            labelDiffSets.getAdded().forEach(new LongProcedure() {
+                @Override
+                public void value(long l) {
+                    labels.put(l,versionLabels.get(l));
+                }
+            });
+        }
+
+        return labels;
+        //return null;
+    }
+
+    //*******************
+    //DynamicGraph method
 
     public void relationshipDoReplaceProperty(long relationshipId, int propertyKeyId, Value replacedValue, Value newValue) {
         if (replacedValue != Values.NO_VALUE) {
@@ -444,9 +514,9 @@ public class TxState implements TransactionState, Home {
         return (LongDiffSets)(this.nodes == null ? LongDiffSets.EMPTY : this.nodes);
     }
 
-    private TxState.RemovalsCountingDiffSets nodes() {
+    private RemovalsCountingDiffSets nodes() {
         if (this.nodes == null) {
-            this.nodes = new TxState.RemovalsCountingDiffSets();
+            this.nodes = new RemovalsCountingDiffSets();
         }
 
         return this.nodes;
@@ -456,9 +526,9 @@ public class TxState implements TransactionState, Home {
         return (LongDiffSets)(this.relationships == null ? LongDiffSets.EMPTY : this.relationships);
     }
 
-    private TxState.RemovalsCountingDiffSets relationships() {
+    private RemovalsCountingDiffSets relationships() {
         if (this.relationships == null) {
-            this.relationships = new TxState.RemovalsCountingDiffSets();
+            this.relationships = new RemovalsCountingDiffSets();
         }
 
         return this.relationships;

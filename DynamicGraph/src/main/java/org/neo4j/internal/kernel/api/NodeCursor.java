@@ -5,6 +5,8 @@
 
 package org.neo4j.internal.kernel.api;
 
+import java.util.Map;
+
 public interface NodeCursor extends Cursor {
     long nodeReference();
 
@@ -16,7 +18,13 @@ public interface NodeCursor extends Cursor {
 
     void allRelationships(RelationshipTraversalCursor var1);
 
+    //Dynamicgraph method
+    //*******************
+    Map<Long,Long> versionLabels();
+    LabelSet labels(long version);
     long nodeVersion();
+    //Dynamicgraph method
+    //*******************
 
     void properties(PropertyCursor var1);
 

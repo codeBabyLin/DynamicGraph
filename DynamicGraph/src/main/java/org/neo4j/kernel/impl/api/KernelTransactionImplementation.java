@@ -125,7 +125,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private final ConstraintSemantics constraintSemantics;
     private TxState txState;
     private AuxiliaryTransactionStateHolder auxTxStateHolder;
-    private volatile KernelTransactionImplementation.TransactionWriteState writeState;
+    private volatile TransactionWriteState writeState;
     private TransactionHooksState hooksState;
     private final KernelStatement currentStatement;
     private final List<CloseListener> closeListeners = new ArrayList(2);
@@ -142,7 +142,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private long timeoutMillis;
     private long lastTransactionIdWhenStarted;
     private volatile long lastTransactionTimestampWhenStarted;
-    private final KernelTransactionImplementation.Statistics statistics;
+    private final Statistics statistics;
     private TransactionEvent transactionEvent;
     private Type type;
     private long transactionId;
@@ -169,7 +169,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.versionContextSupplier = versionContextSupplier;
         this.currentStatement = new KernelStatement(this, this, this.storageReader, lockTracer, statementOperations, this.clocks, versionContextSupplier);
         this.accessCapability = accessCapability;
-        this.statistics = new KernelTransactionImplementation.Statistics(this, cpuClockRef, heapAllocationRef);
+        this.statistics = new Statistics(this, cpuClockRef, heapAllocationRef);
         this.userMetaData = Collections.emptyMap();
         this.constraintSemantics = constraintSemantics;
         DefaultCursors cursors = new DefaultCursors(this.storageReader);
@@ -188,7 +188,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.beforeHookInvoked = false;
         this.failure = false;
         this.success = false;
-        this.writeState = KernelTransactionImplementation.TransactionWriteState.NONE;
+        this.writeState = TransactionWriteState.NONE;
         this.startTimeMillis = this.clocks.systemClock().millis();
         this.timeoutMillis = transactionTimeout;
         this.lastTransactionIdWhenStarted = lastCommittedTx;
@@ -206,6 +206,17 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         this.operations.initialize();
         return this;
     }
+    //DynamicGraph
+    //*****************************************************************************
+
+    public long getLastTransactionIdWhenStarted(){
+        return this.lastTransactionIdWhenStarted;
+    }
+    public long getLastTransactionTimestampWhenStarted(){
+        return this.lastTransactionTimestampWhenStarted;
+    }
+    //DynamicGraph
+    //*****************************************************************************
 
     int getReuseCount() {
         return this.reuseCount;
@@ -264,7 +275,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     }
 
     public boolean isSchemaTransaction() {
-        return this.writeState == KernelTransactionImplementation.TransactionWriteState.SCHEMA;
+        return this.writeState == TransactionWriteState.SCHEMA;
     }
 
     private boolean markForTerminationIfPossible(Status reason) {
@@ -585,6 +596,15 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
 
     }
 
+    //Dynamicgraph Method
+    //*********************************************************
+    public Operations getOperations(){
+        return this.operations;
+    }
+    //Dynamicgraph Method
+    //*********************************************************
+
+
     public Read dataRead() {
         this.assertAllows(AccessMode::allowsReads, "Read");
         return this.operations.dataRead();
@@ -802,7 +822,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         return this.userTransactionId;
     }
 
-    public KernelTransactionImplementation.Statistics getStatistics() {
+    public Statistics getStatistics() {
         return this.statistics;
     }
 
@@ -833,12 +853,12 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private static enum TransactionWriteState {
         NONE,
         DATA {
-            KernelTransactionImplementation.TransactionWriteState upgradeToSchemaWrites() throws InvalidTransactionTypeKernelException {
+            TransactionWriteState upgradeToSchemaWrites() throws InvalidTransactionTypeKernelException {
                 throw new InvalidTransactionTypeKernelException("Cannot perform schema updates in a transaction that has performed data updates.");
             }
         },
         SCHEMA {
-            KernelTransactionImplementation.TransactionWriteState upgradeToDataWrites() throws InvalidTransactionTypeKernelException {
+            TransactionWriteState upgradeToDataWrites() throws InvalidTransactionTypeKernelException {
                 throw new InvalidTransactionTypeKernelException("Cannot perform data updates in a transaction that has performed schema updates.");
             }
         };
@@ -846,11 +866,11 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
         private TransactionWriteState() {
         }
 
-        KernelTransactionImplementation.TransactionWriteState upgradeToDataWrites() throws InvalidTransactionTypeKernelException {
+        TransactionWriteState upgradeToDataWrites() throws InvalidTransactionTypeKernelException {
             return DATA;
         }
 
-        KernelTransactionImplementation.TransactionWriteState upgradeToSchemaWrites() throws InvalidTransactionTypeKernelException {
+        TransactionWriteState upgradeToSchemaWrites() throws InvalidTransactionTypeKernelException {
             return SCHEMA;
         }
     }

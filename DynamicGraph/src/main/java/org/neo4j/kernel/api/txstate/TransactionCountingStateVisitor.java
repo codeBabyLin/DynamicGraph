@@ -6,6 +6,8 @@
 package org.neo4j.kernel.api.txstate;
 
 import java.util.function.LongConsumer;
+
+import org.eclipse.collections.api.map.primitive.LongLongMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
@@ -42,10 +44,26 @@ public class TransactionCountingStateVisitor extends Delegator {
         super.visitCreatedNode(id);
     }
 
+    //DynamicGraph
+    //**********************************************************
+
     @Override
     public void visitNodeVersionChange(long var1, long var2) {
         super.visitNodeVersionChange(var1, var2);
     }
+
+    @Override
+    public void visitRelVersionChange(long var1, long var2) {
+        super.visitRelVersionChange(var1, var2);
+    }
+
+    @Override
+    public void visitNodeVersionLabelChanges(long var1, LongSet var3, LongSet var4, LongLongMap var5) throws ConstraintValidationException {
+        super.visitNodeVersionLabelChanges(var1, var3, var4, var5);
+    }
+
+    //DynamicGraph
+    //**********************************************************
 
     public void visitDeletedNode(long id) {
         this.counts.incrementNodeCount(-1L, -1L);

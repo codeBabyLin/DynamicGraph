@@ -13,6 +13,8 @@ import org.neo4j.kernel.impl.store.record.NodeRecord;
 import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.storageengine.api.StorageNodeCursor;
 
+import java.util.Map;
+
 public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor {
     private NodeStore read;
     private PageCursor pageCursor;
@@ -135,10 +137,26 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor {
         this.setInUse(true);
     }
 
+    //DynamicGraph
+    //**************************
+
     @Override
     public long nodeVersion() {
         return this.getVersion();
     }
+
+    public long[] labels(long version) {
+        return NodeLabelsField.get(this, this.read);
+    }
+
+    @Override
+    public Map<Long, Long> versionLabels() {
+        NodeLabelsField.getVersionLabels(this,this.read);
+        return this.getVersionLabelsMap();
+    }
+
+    //DynamicGraph
+    //**************************
 
     public void reset() {
         if (this.open) {

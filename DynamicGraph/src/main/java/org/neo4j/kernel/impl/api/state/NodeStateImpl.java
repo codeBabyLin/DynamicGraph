@@ -11,8 +11,11 @@ import java.util.Iterator;
 import java.util.Set;
 import org.eclipse.collections.api.IntIterable;
 import org.eclipse.collections.api.iterator.LongIterator;
+import org.eclipse.collections.api.map.primitive.LongLongMap;
+import org.eclipse.collections.api.map.primitive.MutableLongLongMap;
 import org.eclipse.collections.impl.factory.primitive.IntSets;
 import org.eclipse.collections.impl.iterator.ImmutableEmptyLongIterator;
+import org.eclipse.collections.impl.map.mutable.primitive.LongLongHashMap;
 import org.neo4j.kernel.impl.api.state.RelationshipChangesForNode.DiffStrategy;
 import org.neo4j.kernel.impl.util.collection.CollectionsFactory;
 import org.neo4j.kernel.impl.util.diffsets.MutableLongDiffSets;
@@ -74,6 +77,7 @@ class NodeStateImpl extends PropertyContainerStateImpl implements NodeState {
         }
     };
     private MutableLongDiffSets labelDiffSets;
+    private MutableLongLongMap labelsWithVersionMap;
     private RelationshipChangesForNode relationshipsAdded;
     private RelationshipChangesForNode relationshipsRemoved;
     private Set<MutableLongDiffSets> indexDiffs;
@@ -83,6 +87,9 @@ class NodeStateImpl extends PropertyContainerStateImpl implements NodeState {
     NodeStateImpl(long id, CollectionsFactory collectionsFactory) {
         super(id, collectionsFactory);
     }
+
+    //Dynamicgraph method
+    //****************************************************************************
 
     public void setNodeVersion(Long nodeVersion){
         this.nodeVersion = nodeVersion;
@@ -98,6 +105,21 @@ class NodeStateImpl extends PropertyContainerStateImpl implements NodeState {
     public LongDiffSets labelDiffSets() {
         return (LongDiffSets)(this.labelDiffSets == null ? LongDiffSets.EMPTY : this.labelDiffSets);
     }
+    public LongLongMap labelWithVersionMap() {
+        return (LongLongMap)(this.labelsWithVersionMap == null ? new LongLongHashMap() : this.labelsWithVersionMap);
+    }
+
+    MutableLongLongMap getOrCreateLabelWithVersionMap() {
+        if (this.labelsWithVersionMap == null) {
+            this.labelsWithVersionMap = new LongLongHashMap();
+        }
+
+        return this.labelsWithVersionMap;
+    }
+
+
+    //Dynamicgraph method
+    //****************************************************************************
 
     MutableLongDiffSets getOrCreateLabelDiffSets() {
         if (this.labelDiffSets == null) {

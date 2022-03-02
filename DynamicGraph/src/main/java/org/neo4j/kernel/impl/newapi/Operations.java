@@ -12,21 +12,11 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
-import org.neo4j.internal.kernel.api.CursorFactory;
-import org.neo4j.internal.kernel.api.ExplicitIndexRead;
-import org.neo4j.internal.kernel.api.ExplicitIndexWrite;
-import org.neo4j.internal.kernel.api.IndexQuery;
-import org.neo4j.internal.kernel.api.IndexReference;
-import org.neo4j.internal.kernel.api.Locks;
-import org.neo4j.internal.kernel.api.NodeLabelIndexCursor;
-import org.neo4j.internal.kernel.api.Procedures;
-import org.neo4j.internal.kernel.api.Read;
-import org.neo4j.internal.kernel.api.SchemaRead;
-import org.neo4j.internal.kernel.api.SchemaWrite;
-import org.neo4j.internal.kernel.api.Token;
-import org.neo4j.internal.kernel.api.Write;
+import org.neo4j.internal.kernel.api.*;
 import org.neo4j.internal.kernel.api.IndexQuery.ExactPredicate;
+import org.neo4j.internal.kernel.api.Read;
 import org.neo4j.internal.kernel.api.exceptions.EntityNotFoundException;
 import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
@@ -44,6 +34,7 @@ import org.neo4j.internal.kernel.api.schema.LabelSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
+import org.neo4j.internal.kernel.api.security.AccessMode;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
@@ -200,6 +191,107 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.ktx.assertOpen();
         return this.relationshipDelete(relationship, true);
     }
+
+    //Dynamicgraph method
+    //****************************************************************************
+
+
+    public long nodeGetVersion(long nodeId){
+        //NodeCursor nodes = ktx.ambientNodeCursor()
+        ktx.assertOpen();
+        ktx.assertAllows(AccessMode::allowsReads, "Read");
+        NodeCursor nodes = this.nodeCursor;
+        this.dataRead().singleNode(nodeId,nodes);
+        if (!nodes.next()) throw new NotFoundException(new EntityNotFoundException(EntityType.NODE, nodeId));
+        return this.nodeCursor.nodeVersion();
+    }
+
+
+    public boolean nodeAddLabelWithVersion(long node, int nodeLabel, long version) throws KernelException {
+        this.sharedSchemaLock(ResourceTypes.LABEL, nodeLabel);
+        this.acquireExclusiveNodeLock(node);
+        this.ktx.assertOpen();
+        this.singleNode(node);
+        if (this.nodeCursor.hasLabel(nodeLabel)) {
+            return false;
+        } else {
+            this.checkConstraintsAndAddLabelWithVersionToNode(node, nodeLabel,version);
+            return true;
+        }
+    }
+
+
+    public boolean nodeSetVersion(long nodeId, long version) throws EntityNotFoundException {
+        this.acquireExclusiveNodeLock(nodeId);
+        this.ktx.assertOpen();
+        this.singleNode(nodeId);
+        //val labels = this.acquireSharedNodeLabelLocks
+        long existingVersion = this.nodeGetVersion(nodeId);
+
+        if (existingVersion == (long)version) return true;
+        else{
+            this.ktx.txState().nodeDoChangeVersion(nodeId,version);
+        }
+
+        return false;
+    }
+
+
+
+
+    public Value nodeSetVersionProperty(long var1, int var3, Value var4, long version) throws KernelException {
+        return null;
+    }
+
+
+    private void checkConstraintsAndAddLabelWithVersionToNode(long node, int nodeLabel,long version) throws UniquePropertyValueValidationException, UnableToValidateConstraintException {
+        int[] existingPropertyKeyIds = this.loadSortedPropertyKeyList();
+        if (existingPropertyKeyIds.length > 0) {
+            Iterator var5 = this.indexingService.getRelatedUniquenessConstraints(new long[]{(long)nodeLabel}, existingPropertyKeyIds, EntityType.NODE).iterator();
+
+            while(var5.hasNext()) {
+                IndexBackedConstraintDescriptor uniquenessConstraint = (IndexBackedConstraintDescriptor)var5.next();
+                ExactPredicate[] propertyValues = this.getAllPropertyValues(uniquenessConstraint.schema(), -1, Values.NO_VALUE);
+                if (propertyValues != null) {
+                    this.validateNoExistingNodeWithExactValues(uniquenessConstraint, propertyValues, node);
+                }
+            }
+        }
+
+        this.ktx.txState().nodeDoAddLabelWithVersion(node, (long)nodeLabel, version);
+        this.updater.onLabelChange(nodeLabel, existingPropertyKeyIds, this.nodeCursor, this.propertyCursor, LabelChangeType.ADDED_LABEL);
+    }
+
+
+
+    public long relGetVersion(long relId){
+        //NodeCursor nodes = ktx.ambientNodeCursor()
+        ktx.assertOpen();
+        ktx.assertAllows(AccessMode::allowsReads, "Read");
+        RelationshipScanCursor rels = this.relationshipCursor;
+        this.dataRead().singleRelationship(relId,rels);
+        if (!rels.next()) throw new NotFoundException(new EntityNotFoundException(EntityType.RELATIONSHIP, relId));
+        return this.relationshipCursor.relVersion();
+    }
+
+    public boolean relSetVersion(long relId, long version) throws EntityNotFoundException {
+        this.acquireExclusiveNodeLock(relId);
+        this.ktx.assertOpen();
+        this.singleRelationship(relId);
+        //val labels = this.acquireSharedNodeLabelLocks
+        long existingVersion = this.relGetVersion(relId);
+
+        if (existingVersion == (long)version) return true;
+        else{
+            this.ktx.txState().relDoChangeVersion(relId,version);
+        }
+
+        return false;
+    }
+
+
+    //Dynamicgraph method
+    //****************************************************************************
 
     public boolean nodeAddLabel(long node, int nodeLabel) throws EntityNotFoundException, ConstraintValidationException {
         this.sharedSchemaLock(ResourceTypes.LABEL, nodeLabel);

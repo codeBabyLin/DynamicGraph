@@ -8,6 +8,7 @@ package org.neo4j.storageengine.api.txstate;
 import java.util.Iterator;
 import java.util.function.Function;
 import org.eclipse.collections.api.IntIterable;
+import org.eclipse.collections.api.map.primitive.LongLongMap;
 import org.eclipse.collections.api.set.primitive.LongSet;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
 import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
@@ -20,8 +21,14 @@ public interface TxStateVisitor extends AutoCloseable {
     TxStateVisitor.Decorator NO_DECORATION = (txStateVisitor) -> {
         return txStateVisitor;
     };
-
+    //DynamicGraph
+    //**********************************************************
     void visitNodeVersionChange(long var1,long var2);
+    void visitRelVersionChange(long var1,long var2);
+    void visitNodeVersionLabelChanges(long var1, LongSet var3, LongSet var4, LongLongMap var5) throws ConstraintValidationException;
+
+    //DynamicGraph
+    //**********************************************************
     void visitCreatedNode(long var1);
 
     void visitDeletedNode(long var1);
@@ -66,10 +73,26 @@ public interface TxStateVisitor extends AutoCloseable {
             this.actual = actual;
         }
 
+        //DynamicGraph
+        //**********************************************************
+
         @Override
         public void visitNodeVersionChange(long var1, long var2) {
             this.actual.visitNodeVersionChange(var1,var2);
         }
+
+        @Override
+        public void visitRelVersionChange(long var1, long var2) {
+            this.actual.visitRelVersionChange(var1,var2);
+        }
+
+        @Override
+        public void visitNodeVersionLabelChanges(long var1, LongSet var3, LongSet var4, LongLongMap var5) throws ConstraintValidationException {
+            this.actual.visitNodeVersionLabelChanges(var1,var3,var4,var5);
+        }
+
+        //DynamicGraph
+        //**********************************************************
 
         public void visitCreatedNode(long id) {
             this.actual.visitCreatedNode(id);
@@ -140,10 +163,26 @@ public interface TxStateVisitor extends AutoCloseable {
         public Adapter() {
         }
 
+
+        //DynamicGraph
+        //**********************************************************
         @Override
         public void visitNodeVersionChange(long var1, long var2) {
 
         }
+
+        @Override
+        public void visitRelVersionChange(long var1, long var2) {
+
+        }
+
+        @Override
+        public void visitNodeVersionLabelChanges(long var1, LongSet var3, LongSet var4, LongLongMap var5) throws ConstraintValidationException {
+
+        }
+
+        //DynamicGraph
+        //**********************************************************
 
         public void visitCreatedNode(long id) {
         }

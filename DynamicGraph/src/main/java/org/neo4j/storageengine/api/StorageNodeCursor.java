@@ -5,7 +5,10 @@
 
 package org.neo4j.storageengine.api;
 
+import java.util.Map;
+
 public interface StorageNodeCursor extends StorageEntityScanCursor {
+
     long[] labels();
 
     boolean hasLabel(int var1);
@@ -16,7 +19,17 @@ public interface StorageNodeCursor extends StorageEntityScanCursor {
 
     void setCurrent(long var1);
 
+
+    //Dynamicgraph
+    //*************************************************
+
+    Map<Long,Long> versionLabels();
+    long[] labels(long version);
+
     long nodeVersion();
+
+    //Dynamicgraph
+    //*************************************************
 
     boolean isDense();
 }

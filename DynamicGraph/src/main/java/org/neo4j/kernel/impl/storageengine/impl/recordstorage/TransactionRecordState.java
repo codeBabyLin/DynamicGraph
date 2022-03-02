@@ -12,8 +12,8 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 
-import DynamicGraph.store.Node.NodeVersionStore;
-import DynamicGraph.store.record.DynamicVersionRecord;
+//import DynamicGraph.store.Node.NodeVersionStore;
+//import DynamicGraph.store.record.DynamicVersionRecord;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.kernel.impl.store.MetaDataStore;
 import org.neo4j.kernel.impl.store.NeoStores;
@@ -62,11 +62,11 @@ import org.neo4j.storageengine.api.schema.StoreIndexDescriptor;
 import org.neo4j.values.storable.Value;
 
 public class TransactionRecordState implements RecordState {
-    private static final TransactionRecordState.CommandComparator COMMAND_COMPARATOR = new TransactionRecordState.CommandComparator();
+    private static final CommandComparator COMMAND_COMPARATOR = new CommandComparator();
     private static final Command[] EMPTY_COMMANDS = new Command[0];
     private final NeoStores neoStores;
     private final IntegrityValidator integrityValidator;
-    private final NodeVersionStore nodeStore;
+    private final NodeStore nodeStore;
     private final RelationshipStore relationshipStore;
     private final PropertyStore propertyStore;
     private final RecordStore<RelationshipGroupRecord> relationshipGroupStore;
@@ -283,7 +283,7 @@ public class TransactionRecordState implements RecordState {
         }
     }
 
-    private Collection<DynamicVersionRecord> markNotInUse(Collection<DynamicVersionRecord> dynamicLabelRecords) {
+    private Collection<DynamicRecord> markNotInUse(Collection<DynamicRecord> dynamicLabelRecords) {
         Iterator var2 = dynamicLabelRecords.iterator();
 
         while(var2.hasNext()) {
@@ -303,11 +303,28 @@ public class TransactionRecordState implements RecordState {
         this.propertyDeleter.removeProperty(rel, propertyKey, this.recordChangeSet.getPropertyRecords());
     }
 
+    //DynamicGraph
+    //**********************************************************
+
+    public void relVersionChange(long relId,long version){
+        RecordProxy<RelationshipRecord, Void> rel = this.recordChangeSet.getRelRecords().getOrLoad(relId, (Void)null);
+        //node.forChangingLinkage().setVersion(version);
+        rel.forChangingData().setVersion(version);
+        //rel.forChangingData().setVersion(version);
+    }
     public void nodeVersionChange(long nodeId,long version){
         RecordProxy<NodeRecord, Void> node = this.recordChangeSet.getNodeRecords().getOrLoad(nodeId, (Void)null);
         //node.forChangingLinkage().setVersion(version);
         node.forChangingData().setVersion(version);
     }
+
+    void addVersionLabelToNode(long labelId, long nodeId, long version) {
+        NodeRecord nodeRecord = (NodeRecord)this.recordChangeSet.getNodeRecords().getOrLoad(nodeId, (Void)null).forChangingData();
+        NodeLabelsField.parseLabelsField(nodeRecord).add(labelId, this.nodeStore, this.nodeStore.getDynamicLabelStore(),version);
+    }
+
+    //DynamicGraph
+    //**********************************************************
 
     public void nodeRemoveProperty(long nodeId, int propertyKey) {
         RecordProxy<NodeRecord, Void> node = this.recordChangeSet.getNodeRecords().getOrLoad(nodeId, (Void)null);
@@ -334,11 +351,17 @@ public class TransactionRecordState implements RecordState {
         this.propertyCreator.primitiveSetProperty(node, propertyKey, value, this.recordChangeSet.getPropertyRecords());
     }
 
+    //DynamicGraph
+    //***********************************************************
     public void nodeCreate(long nodeId) {
         NodeRecord nodeRecord = (NodeRecord)this.recordChangeSet.getNodeRecords().create(nodeId, (Void)null).forChangingData();
         nodeRecord.setInUse(true);
+        nodeRecord.setVersion(this.lastCommittedTxWhenTransactionStarted);
         nodeRecord.setCreated();
     }
+
+    //DynamicGraph
+    //***********************************************************
 
     void createPropertyKeyToken(String key, long id) {
         TokenCreator<PropertyKeyTokenRecord> creator = new TokenCreator(this.neoStores.getPropertyKeyTokenStore());
