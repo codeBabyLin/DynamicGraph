@@ -98,6 +98,7 @@ class TransactionToRecordStateVisitor extends Adapter {
         this.recordState.relDelete(id);
     }
 
+    @Override
     public void visitNodePropertyChanges(long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed) {
         removed.each((propId) -> {
             this.recordState.nodeRemoveProperty(id, propId);
@@ -116,6 +117,7 @@ class TransactionToRecordStateVisitor extends Adapter {
 
     }
 
+    @Override
     public void visitRelPropertyChanges(long id, Iterator<StorageProperty> added, Iterator<StorageProperty> changed, IntIterable removed) {
         removed.each((relId) -> {
             this.recordState.relRemoveProperty(id, relId);

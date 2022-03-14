@@ -19,6 +19,16 @@ import org.neo4j.kernel.impl.api.ClockContext;
 import org.neo4j.storageengine.api.schema.IndexDescriptor;
 
 public interface KernelTransaction extends Transaction, AssertOpen {
+    //DynamicGraph
+    //***********************************************
+    //void setStartEndVersion(long startVersion,long endVersion);
+
+    void setVersion(long version);
+    long getVersion();
+
+    //DynamicGraph
+    //***********************************************
+
     Statement acquireStatement();
 
     IndexDescriptor indexUniqueCreate(SchemaDescriptor var1, String var2) throws SchemaKernelException;

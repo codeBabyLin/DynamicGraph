@@ -690,7 +690,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord, HEA
         }
     }
 
-    void assertNotClosed() {
+    protected void assertNotClosed() {
         if (this.pagedFile == null) {
             throw new IllegalStateException(this + " for file '" + this.storageFile + "' is closed");
         }
@@ -1014,7 +1014,7 @@ public abstract class CommonAbstractStore<RECORD extends AbstractBaseRecord, HEA
         throw new UnderlyingStorageException(buildOutOfBoundsExceptionMessage(record, pageId, offset, this.recordSize, this.pagedFile.pageSize(), this.storageFile.getAbsolutePath()));
     }
 
-    static String buildOutOfBoundsExceptionMessage(AbstractBaseRecord record, long pageId, int offset, int recordSize, int pageSize, String filename) {
+    protected static String buildOutOfBoundsExceptionMessage(AbstractBaseRecord record, long pageId, int offset, int recordSize, int pageSize, String filename) {
         return "Access to record " + record + " went out of bounds of the page. The record size is " + recordSize + " bytes, and the access was at offset " + offset + " bytes into page " + pageId + ", and the pages have a capacity of " + pageSize + " bytes. The mapped store file in question is " + filename;
     }
 

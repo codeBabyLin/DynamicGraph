@@ -23,7 +23,14 @@ public interface TransactionState extends ReadableTransactionState {
 
 
 
-    void nodeDoAddLabelWithVersion(long nodeId, long labelId, long version);
+    void nodeDoAddLabel(long nodeId, long labelId, long version);
+    void nodeDoRemoveLabel(long nodeId, long labelId, long version);
+
+
+    void nodeDoDelete(long var1,long version);
+    void nodeDoCreate(long var1,long version);
+    void relationshipDoCreate(long var1, int var3, long var4, long var6,long version);
+    void relationshipDoDelete(long var1, int var3, long var4, long var6,long version);
     //Dynamicgraph method
     //****************************************************************************
     void relationshipDoCreate(long var1, int var3, long var4, long var6);

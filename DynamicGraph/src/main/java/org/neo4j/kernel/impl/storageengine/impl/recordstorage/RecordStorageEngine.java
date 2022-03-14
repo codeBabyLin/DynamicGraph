@@ -348,6 +348,7 @@ public class RecordStorageEngine implements StorageEngine, Lifecycle {
         satisfier.satisfyDependency(this.labelScanStore);
         satisfier.satisfyDependency(this.indexingService);
         satisfier.satisfyDependency(this.neoStores.getMetaDataStore());
+        satisfier.satisfyDependency(this.neoStores.getDbVersionStore());
         satisfier.satisfyDependency(this.indexStoreView);
     }
 

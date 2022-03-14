@@ -23,6 +23,7 @@ public interface StorageNodeCursor extends StorageEntityScanCursor {
     //Dynamicgraph
     //*************************************************
 
+    void setCurrent(long var1,long version);
     Map<Long,Long> versionLabels();
     long[] labels(long version);
 

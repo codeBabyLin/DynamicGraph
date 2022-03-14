@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.neo4j.util.Preconditions;
 
 public enum DatabaseFile {
+
     NODE_STORE("neostore.nodestore.db"),
     NODE_LABEL_STORE("neostore.nodestore.db.labels"),
     PROPERTY_STORE("neostore.propertystore.db"),
@@ -31,6 +32,7 @@ public enum DatabaseFile {
     COUNTS_STORE_B(false, new String[]{"neostore.counts.db.b"}),
     METADATA_STORE("neostore"),
     LABEL_SCAN_STORE(false, new String[]{"neostore.labelscanstore.db"}),
+    DB_VERSION_STORE("neostore.versionStore.db"),
     Node_VERSION_LABEL_STORE("neostore.nodestore.db.versionlabels");
 
     private final List<String> names;

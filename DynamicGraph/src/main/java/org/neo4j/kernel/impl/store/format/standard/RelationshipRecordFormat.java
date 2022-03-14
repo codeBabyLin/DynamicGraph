@@ -13,10 +13,10 @@ import org.neo4j.kernel.impl.store.record.RecordLoad;
 import org.neo4j.kernel.impl.store.record.RelationshipRecord;
 
 public class RelationshipRecordFormat extends BaseOneByteHeaderRecordFormat<RelationshipRecord> {
-    public static final int RECORD_SIZE = 34;
+    public static final int RECORD_SIZE = 38;
 
     public RelationshipRecordFormat() {
-        super(fixedRecordSize(34), 0, 1, 35);
+        super(fixedRecordSize(38), 0, 1, 35);
     }
 
     public RelationshipRecord newRecord() {

@@ -14,12 +14,24 @@ import org.neo4j.io.layout.DatabaseFile;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 
 public enum StoreType {
+    //DynamicGraph
+    //*******************************
+
     NODE_VERSION_LABEL(DatabaseFile.Node_VERSION_LABEL_STORE,true,false){
         public CommonAbstractStore open(NeoStores neoStores) {
             DynamicNeoStores dns = (DynamicNeoStores)neoStores;
             return dns.createNodeVersionLabelStore();
         }
     },
+    DB_VERSION_STORE(DatabaseFile.DB_VERSION_STORE,true,true){
+        public CommonAbstractStore open(NeoStores neoStores) {
+            //DynamicNeoStores dns = (DynamicNeoStores)neoStores;
+            return neoStores.createdbVersionStore();
+        }
+    },
+
+    //DynamicGraph
+    //*******************************
     NODE_LABEL(DatabaseFile.NODE_LABEL_STORE, true, false) {
         public CommonAbstractStore open(NeoStores neoStores) {
             return neoStores.createNodeLabelStore();

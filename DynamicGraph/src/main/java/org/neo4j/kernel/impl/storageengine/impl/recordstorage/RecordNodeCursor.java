@@ -5,6 +5,7 @@
 
 package org.neo4j.kernel.impl.storageengine.impl.recordstorage;
 
+import cn.DynamicGraph.Common.DGVersion;
 import org.neo4j.io.pagecache.PageCursor;
 import org.neo4j.kernel.impl.newapi.RelationshipReferenceEncoding;
 import org.neo4j.kernel.impl.store.NodeLabelsField;
@@ -137,8 +138,18 @@ public class RecordNodeCursor extends NodeRecord implements StorageNodeCursor {
         this.setInUse(true);
     }
 
+
+
     //DynamicGraph
     //**************************
+
+    @Override
+    public void setCurrent(long nodeReference, long startVersion) {
+        this.setVersion(DGVersion.setStartVersion(startVersion));
+        this.setId(nodeReference);
+        this.setInUse(true);
+    }
+
 
     @Override
     public long nodeVersion() {

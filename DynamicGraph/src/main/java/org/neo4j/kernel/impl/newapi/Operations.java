@@ -5,11 +5,12 @@
 
 package org.neo4j.kernel.impl.newapi;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Optional;
+import java.lang.reflect.Array;
+import java.util.*;
+import java.util.function.Consumer;
+
+import cn.DynamicGraph.Common.DGVersion;
+import cn.DynamicGraph.Common.Serialization;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.mutable.MutableInt;
 import org.neo4j.graphdb.NotFoundException;
@@ -123,7 +124,12 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
     public long nodeCreate() {
         this.ktx.assertOpen();
         long nodeId = this.statement.reserveNode();
-        this.ktx.txState().nodeDoCreate(nodeId);
+        //DynamicGraph
+        //**********************************************
+        this.ktx.txState().nodeDoCreate(nodeId,this.ktx.getVersion());
+
+        //DynamicGraph
+        //**********************************************
         return nodeId;
     }
 
@@ -156,9 +162,13 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         }
     }
 
+
     public boolean nodeDelete(long node) throws AutoIndexingKernelException {
         this.ktx.assertOpen();
-        return this.nodeDelete(node, true);
+        //DynamicGraph
+        //return this.nodeDelete(node, true);
+        return this.nodeDelete(node, true, this.ktx.getVersion());
+        //DynamicGraph
     }
 
     public int nodeDetachDelete(long nodeId) throws KernelException {
@@ -183,18 +193,90 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.assertNodeExists(sourceNode);
         this.assertNodeExists(targetNode);
         long id = this.statement.reserveRelationship();
-        this.ktx.txState().relationshipDoCreate(id, relationshipType, sourceNode, targetNode);
+        //DynamicGraph
+        //**********************************************
+        //this.ktx.txState().relationshipDoCreate(id, relationshipType, sourceNode, targetNode);
+        this.ktx.txState().relationshipDoCreate(id, relationshipType, sourceNode, targetNode,this.ktx.getVersion());
+        //DynamicGraph
+        //**********************************************
         return id;
     }
 
     public boolean relationshipDelete(long relationship) throws AutoIndexingKernelException {
         this.ktx.assertOpen();
-        return this.relationshipDelete(relationship, true);
+        return this.relationshipDelete(relationship, true,this.ktx.getVersion());
     }
 
-    //Dynamicgraph method
-    //****************************************************************************
 
+    //****************************************************************************
+    //Dynamicgraph method
+    private boolean relationshipDelete(long relationship, boolean lock,long version) throws AutoIndexingKernelException {
+        this.allStoreHolder.singleRelationship(relationship, this.relationshipCursor);
+        if (this.relationshipCursor.next()) {
+            if (lock) {
+                this.lockRelationshipNodes(this.relationshipCursor.sourceNodeReference(), this.relationshipCursor.targetNodeReference());
+                this.acquireExclusiveRelationshipLock(relationship);
+            }
+
+            if (!this.allStoreHolder.relationshipExists(relationship)) {
+                return false;
+            } else {
+                this.ktx.assertOpen();
+                this.autoIndexing.relationships().entityRemoved(this, relationship);
+                TransactionState txState = this.ktx.txState();
+                if (txState.relationshipIsAddedInThisTx(relationship)) {
+                    txState.relationshipDoDeleteAddedInThisTx(relationship);
+                } else {
+                    long endVersion = DGVersion.getStartVersion(version);
+                    long oldVersion = this.relationshipCursor.relVersion();
+                    if(!DGVersion.hasEndVersion(oldVersion)) {
+                        long newVersion = DGVersion.setEndVersion(endVersion,oldVersion);
+                        txState.relationshipDoDelete(relationship, this.relationshipCursor.type(), this.relationshipCursor.sourceNodeReference(), this.relationshipCursor.targetNodeReference(),newVersion);
+                        return true;
+                    }
+                    else return false;
+                }
+
+                return true;
+            }
+        } else {
+            return false;
+        }
+    }
+    private boolean nodeDelete(long node,boolean lock, long version) throws AutoIndexingKernelException {
+        this.ktx.assertOpen();
+        if (this.ktx.hasTxStateWithChanges()) {
+            if (this.ktx.txState().nodeIsAddedInThisTx(node)) {
+                this.autoIndexing.nodes().entityRemoved(this, node);
+                this.ktx.txState().nodeDoDelete(node);
+                return true;
+            }
+
+            if (this.ktx.txState().nodeIsDeletedInThisTx(node)) {
+                return false;
+            }
+        }
+
+        if (lock) {
+            this.ktx.statementLocks().optimistic().acquireExclusive(this.ktx.lockTracer(), ResourceTypes.NODE, new long[]{node});
+        }
+
+        this.allStoreHolder.singleNode(node, this.nodeCursor);
+        if (this.nodeCursor.next()) {
+            this.acquireSharedNodeLabelLocks();
+            //this.autoIndexing.nodes().entityRemoved(this, node);
+            long endVersion = DGVersion.getStartVersion(version);
+            long oldVersion = this.nodeCursor.nodeVersion();
+            if(!DGVersion.hasEndVersion(oldVersion)) {
+                long newVersion = DGVersion.setEndVersion(endVersion, oldVersion);
+                this.ktx.txState().nodeDoDelete(node, newVersion);
+                return true;
+            }
+            else return false;
+        } else {
+            return false;
+        }
+    }
 
     public long nodeGetVersion(long nodeId){
         //NodeCursor nodes = ktx.ambientNodeCursor()
@@ -207,7 +289,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
     }
 
 
-    public boolean nodeAddLabelWithVersion(long node, int nodeLabel, long version) throws KernelException {
+    public boolean nodeAddLabel(long node, int nodeLabel, long version) throws KernelException {
         this.sharedSchemaLock(ResourceTypes.LABEL, nodeLabel);
         this.acquireExclusiveNodeLock(node);
         this.ktx.assertOpen();
@@ -215,7 +297,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         if (this.nodeCursor.hasLabel(nodeLabel)) {
             return false;
         } else {
-            this.checkConstraintsAndAddLabelWithVersionToNode(node, nodeLabel,version);
+            this.checkConstraintsAndAddLabelToNode(node, nodeLabel,version);
             return true;
         }
     }
@@ -244,7 +326,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
     }
 
 
-    private void checkConstraintsAndAddLabelWithVersionToNode(long node, int nodeLabel,long version) throws UniquePropertyValueValidationException, UnableToValidateConstraintException {
+    private void checkConstraintsAndAddLabelToNode(long node, int nodeLabel, long version) throws UniquePropertyValueValidationException, UnableToValidateConstraintException {
         int[] existingPropertyKeyIds = this.loadSortedPropertyKeyList();
         if (existingPropertyKeyIds.length > 0) {
             Iterator var5 = this.indexingService.getRelatedUniquenessConstraints(new long[]{(long)nodeLabel}, existingPropertyKeyIds, EntityType.NODE).iterator();
@@ -258,7 +340,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
             }
         }
 
-        this.ktx.txState().nodeDoAddLabelWithVersion(node, (long)nodeLabel, version);
+        this.ktx.txState().nodeDoAddLabel(node, (long)nodeLabel, version);
         this.updater.onLabelChange(nodeLabel, existingPropertyKeyIds, this.nodeCursor, this.propertyCursor, LabelChangeType.ADDED_LABEL);
     }
 
@@ -293,8 +375,14 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
     //Dynamicgraph method
     //****************************************************************************
 
-    public boolean nodeAddLabel(long node, int nodeLabel) throws EntityNotFoundException, ConstraintValidationException {
-        this.sharedSchemaLock(ResourceTypes.LABEL, nodeLabel);
+    public boolean nodeAddLabel(long node, int nodeLabel) throws KernelException {
+
+
+        //********************************************
+        return this.nodeAddLabel(node,nodeLabel,this.ktx.getVersion());
+
+        //************************************************
+     /*   this.sharedSchemaLock(ResourceTypes.LABEL, nodeLabel);
         this.acquireExclusiveNodeLock(node);
         this.ktx.assertOpen();
         this.singleNode(node);
@@ -303,7 +391,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         } else {
             this.checkConstraintsAndAddLabelToNode(node, nodeLabel);
             return true;
-        }
+        }*/
     }
 
     private void checkConstraintsAndAddLabelToNode(long node, int nodeLabel) throws UniquePropertyValueValidationException, UnableToValidateConstraintException {
@@ -532,11 +620,21 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.acquireExclusiveNodeLock(node);
         this.ktx.assertOpen();
         this.singleNode(node);
+
         if (!this.nodeCursor.hasLabel(labelId)) {
             return false;
         } else {
+            //******************************************
+            long endVersion = DGVersion.getStartVersion(this.ktx.getVersion());
+            long oldVersion = this.nodeCursor.versionLabels().get((long)labelId);
+            if(DGVersion.hasEndVersion(oldVersion)){
+                return false;
+            }
+            long newVersion = DGVersion.setEndVersion(endVersion,oldVersion);
+            //******************************************************************
             this.sharedSchemaLock(ResourceTypes.LABEL, labelId);
-            this.ktx.txState().nodeDoRemoveLabel((long)labelId, node);
+            //this.ktx.txState().nodeDoRemoveLabel((long)labelId, node);
+            this.ktx.txState().nodeDoRemoveLabel((long)labelId, node,newVersion);
             if (this.indexingService.hasRelatedSchema(labelId, EntityType.NODE)) {
                 this.updater.onLabelChange(labelId, this.loadSortedPropertyKeyList(), this.nodeCursor, this.propertyCursor, LabelChangeType.REMOVED_LABEL);
             }
@@ -551,6 +649,14 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.singleNode(node);
         long[] labels = this.acquireSharedNodeLabelLocks();
         Value existingValue = this.readNodeProperty(propertyKey);
+        //DynamicGraph
+        Map<Integer,Object> pMap = new HashMap<>();
+        if(!(existingValue == Values.NO_VALUE)){
+            pMap = Serialization.readJMapFromObject(existingValue.asObjectCopy());
+            Object curValue = getCurrentValue(pMap);
+            existingValue = curValue == null?Values.NO_VALUE:Values.of(curValue);
+        }
+        //DynamicGraph
         int[] existingPropertyKeyIds = null;
         boolean hasRelatedSchema = this.indexingService.hasRelatedSchema(labels, propertyKey, EntityType.NODE);
         if (hasRelatedSchema) {
@@ -566,7 +672,15 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
 
         if (existingValue == Values.NO_VALUE) {
             this.autoIndexing.nodes().propertyAdded(this, node, propertyKey, value);
-            this.ktx.txState().nodeDoAddProperty(node, propertyKey, value);
+            //DynamicGraph
+
+            assert pMap != null;
+            pMap.put((int) this.ktx.getVersion(),value.asObjectCopy());
+            byte[] data = Serialization.writeMapToByteArray(pMap);
+            Value newValue = Values.of(data);
+            //DynamicGraph
+            this.ktx.txState().nodeDoAddProperty(node, propertyKey, newValue);
+            //this.ktx.txState().nodeDoAddProperty(node, propertyKey, value);
             if (hasRelatedSchema) {
                 this.updater.onPropertyAdd(this.nodeCursor, this.propertyCursor, labels, propertyKey, existingPropertyKeyIds, value);
             }
@@ -574,8 +688,14 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
             return Values.NO_VALUE;
         } else {
             this.autoIndexing.nodes().propertyChanged(this, node, propertyKey, existingValue, value);
-            if (propertyHasChanged(value, existingValue)) {
-                this.ktx.txState().nodeDoChangeProperty(node, propertyKey, value);
+
+            if (propertyHasChanged(existingValue,value)) {
+                //DynamicGraph
+                //Map<Integer,Object> data = Serialization.readJMapFromObject(existingValue.asObjectCopy());
+                addNewValue(value.asObjectCopy(),pMap);
+                //DynamicGraph
+                Value newValue = Values.of(Serialization.writeMapToByteArray(pMap));
+                this.ktx.txState().nodeDoChangeProperty(node, propertyKey, newValue);
                 if (hasRelatedSchema) {
                     this.updater.onPropertyChange(this.nodeCursor, this.propertyCursor, labels, propertyKey, existingPropertyKeyIds, existingValue, value);
                 }
@@ -584,16 +704,66 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
             return existingValue;
         }
     }
+    private void removeCurrentValue(Map<Integer, Object> data){
+        int keyCur = getCurrentKey(data);
+        Object valCur = data.get(keyCur);
+
+        if(!DGVersion.hasEndVersion(keyCur)){
+            data.remove(keyCur);
+            long startVersion = DGVersion.getStartVersion(this.ktx.getVersion());
+            int newKey = (int) DGVersion.setEndVersion(startVersion,keyCur);
+            data.put(newKey,valCur);
+        }
+    }
+    private void addNewValue(Object value, Map<Integer, Object> data) {
+        removeCurrentValue(data);
+        data.put((int) this.ktx.getVersion(),value);
+
+    }
+    private Object getCurrentValue(Map<Integer, Object> data){
+       int key = getCurrentKey(data);
+       if(DGVersion.hasEndVersion(key)){
+           return null;
+       }
+       return data.get(key);
+    }
+    private int getCurrentKey(Map<Integer, Object> data){
+        int keyMax = -1;
+        Iterator<Integer> it = data.keySet().iterator();
+        while(it.hasNext()){
+            int key = it.next();
+            if(!DGVersion.hasEndVersion(key)) return key;
+        }
+      return keyMax;
+    }
+
 
     public Value nodeRemoveProperty(long node, int propertyKey) throws EntityNotFoundException, AutoIndexingKernelException {
         this.acquireExclusiveNodeLock(node);
         this.ktx.assertOpen();
         this.singleNode(node);
         Value existingValue = this.readNodeProperty(propertyKey);
+        //DynamicGraph
+        Map<Integer,Object> pMap = new HashMap<>();
+        if(!(existingValue == Values.NO_VALUE)){
+            pMap = Serialization.readJMapFromObject(existingValue.asObjectCopy());
+            Object curValue = getCurrentValue(pMap);
+            existingValue = curValue == null?Values.NO_VALUE:Values.of(curValue);
+        }
+        //DynamicGraph
+
         if (existingValue != Values.NO_VALUE) {
+
+            //DynamicGraph
+            removeCurrentValue(pMap);
+            Value newValue = Values.of(Serialization.writeMapToByteArray(pMap));
+            //DynamicGraph
+
             long[] labels = this.acquireSharedNodeLabelLocks();
             this.autoIndexing.nodes().propertyRemoved(this, node, propertyKey);
-            this.ktx.txState().nodeDoRemoveProperty(node, propertyKey);
+
+            //this.ktx.txState().nodeDoRemoveProperty(node, propertyKey);
+            this.ktx.txState().nodeDoChangeProperty(node,propertyKey,newValue);
             if (this.indexingService.hasRelatedSchema(labels, propertyKey, EntityType.NODE)) {
                 this.updater.onPropertyRemove(this.nodeCursor, this.propertyCursor, labels, propertyKey, this.loadSortedPropertyKeyList(), existingValue);
             }
@@ -607,14 +777,37 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.ktx.assertOpen();
         this.singleRelationship(relationship);
         Value existingValue = this.readRelationshipProperty(propertyKey);
+        //DynamicGraph
+        Map<Integer,Object> pMap = new HashMap<>();
+        if(!(existingValue == Values.NO_VALUE)){
+            pMap = Serialization.readJMapFromObject(existingValue.asObjectCopy());
+            Object curValue = getCurrentValue(pMap);
+            existingValue = curValue == null?Values.NO_VALUE:Values.of(curValue);
+        }
+        //DynamicGraph
+
         if (existingValue == Values.NO_VALUE) {
             this.autoIndexing.relationships().propertyAdded(this, relationship, propertyKey, value);
-            this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, Values.NO_VALUE, value);
+            //DynamicGraph
+
+            assert pMap != null;
+            pMap.put((int) this.ktx.getVersion(),value.asObjectCopy());
+            byte[] data = Serialization.writeMapToByteArray(pMap);
+            Value newValue = Values.of(data);
+            //DynamicGraph
+            this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, Values.NO_VALUE, newValue);
+            //this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, Values.NO_VALUE, value);
             return Values.NO_VALUE;
         } else {
             this.autoIndexing.relationships().propertyChanged(this, relationship, propertyKey, existingValue, value);
+
             if (propertyHasChanged(existingValue, value)) {
-                this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, existingValue, value);
+
+                addNewValue(value.asObjectCopy(),pMap);
+                //DynamicGraph
+                Value newValue = Values.of(Serialization.writeMapToByteArray(pMap));
+                this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, existingValue, newValue);
+                //this.ktx.txState().relationshipDoReplaceProperty(relationship, propertyKey, existingValue, value);
             }
 
             return existingValue;
@@ -626,9 +819,23 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         this.ktx.assertOpen();
         this.singleRelationship(relationship);
         Value existingValue = this.readRelationshipProperty(propertyKey);
+        //DynamicGraph
+        Map<Integer,Object> pMap = new HashMap<>();
+        if(!(existingValue == Values.NO_VALUE)){
+            pMap = Serialization.readJMapFromObject(existingValue.asObjectCopy());
+            Object curValue = getCurrentValue(pMap);
+            existingValue = curValue == null?Values.NO_VALUE:Values.of(curValue);
+        }
+        //DynamicGraph
         if (existingValue != Values.NO_VALUE) {
+            //DynamicGraph
+            removeCurrentValue(pMap);
+            Value newValue = Values.of(Serialization.writeMapToByteArray(pMap));
+            //DynamicGraph
+
             this.autoIndexing.relationships().propertyRemoved(this, relationship, propertyKey);
-            this.ktx.txState().relationshipDoRemoveProperty(relationship, propertyKey);
+            //this.ktx.txState().relationshipDoRemoveProperty(relationship, propertyKey);
+            this.ktx.txState().relationshipDoReplaceProperty(relationship,propertyKey,existingValue,newValue);
         }
 
         return existingValue;

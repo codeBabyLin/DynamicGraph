@@ -12,8 +12,11 @@ import java.nio.file.OpenOption;
 import java.util.Iterator;
 import java.util.function.Predicate;
 
+import cn.DynamicGraph.kernel.impl.store.DbVersionStore;
 import cn.DynamicGraph.kernel.impl.store.NodeVersionStore;
 import cn.DynamicGraph.kernel.impl.store.format.VersionRecordFormatsImpl;
+import cn.DynamicGraph.kernel.impl.store.format.standard.DbVersionRecordFormat;
+import cn.DynamicGraph.kernel.impl.store.record.DbVersionRecord;
 import cn.DynamicGraph.store.versionStore.DynamicVersionArrayStore;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
@@ -36,10 +39,7 @@ import org.neo4j.kernel.impl.api.CountsAccessor.Updater;
 import org.neo4j.kernel.impl.store.MetaDataStore.Position;
 import org.neo4j.kernel.impl.store.counts.CountsTracker;
 import org.neo4j.kernel.impl.store.counts.ReadOnlyCountsTracker;
-import org.neo4j.kernel.impl.store.format.CapabilityType;
-import org.neo4j.kernel.impl.store.format.FormatFamily;
-import org.neo4j.kernel.impl.store.format.RecordFormatSelector;
-import org.neo4j.kernel.impl.store.format.RecordFormats;
+import org.neo4j.kernel.impl.store.format.*;
 import org.neo4j.kernel.impl.store.id.IdGeneratorFactory;
 import org.neo4j.kernel.impl.store.id.IdType;
 import org.neo4j.kernel.impl.store.kvstore.DataInitializer;
@@ -246,9 +246,9 @@ public class NeoStores implements AutoCloseable {
     public NodeStore getNodeStore() {
         return (NodeStore)this.getStore(StoreType.NODE);
     }
-/*   public NodeVersionStore getNodeStore(){
-       return (NodeVersionStore)this.getStore(StoreType.NODE);
-   }*/
+   public DbVersionStore getDbVersionStore(){
+       return (DbVersionStore)this.getStore(StoreType.DB_VERSION_STORE);
+   }
 
     private DynamicArrayStore getNodeLabelStore() {
         return (DynamicArrayStore)this.getStore(StoreType.NODE_LABEL);
@@ -379,6 +379,12 @@ public class NeoStores implements AutoCloseable {
     }
 
     //NodeStore -> DynamicNodeStore
+    CommonAbstractStore createdbVersionStore() {
+        //return this.initialize(new NodeStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicArrayStore)this.getOrCreateStore(StoreType.NODE_LABEL), this.recordFormats, this.openOptions));
+        //DbVersionStore(File file, File idFile, Config configuration, IdType idType, IdGeneratorFactory idGeneratorFactory, PageCache pageCache, LogProvider logProvider, String typeDescriptor, RecordFormat< DbVersionRecord > recordFormat, StoreHeaderFormat<NoStoreHeader> storeHeaderFormat, String storeVersion, OpenOption... openOptions)
+        return this.initialize(new DbVersionStore(this.layout.dbVersionStore(), this.layout.idDbVersionStore(),this.config,IdType.NODE,this.idGeneratorFactory,this.pageCache,this.logProvider,"dbversionStore", new DbVersionRecordFormat(),NoStoreHeaderFormat.NO_STORE_HEADER_FORMAT,recordFormats.storeVersion(), this.openOptions));
+
+    }
     CommonAbstractStore createNodeStore() {
         //return this.initialize(new NodeStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicArrayStore)this.getOrCreateStore(StoreType.NODE_LABEL), this.recordFormats, this.openOptions));
         return this.initialize(new NodeStore(this.layout.nodeStore(), this.layout.idNodeStore(), this.config, this.idGeneratorFactory, this.pageCache, this.logProvider, (DynamicArrayStore)this.getOrCreateStore(StoreType.NODE_LABEL),(DynamicVersionArrayStore)this.getOrCreateStore(StoreType.NODE_VERSION_LABEL),this.recordFormats, this.openOptions));

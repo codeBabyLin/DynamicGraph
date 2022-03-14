@@ -132,7 +132,7 @@ class DynamicNodeProxyM2 (spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(
     try {
       val ignore = transaction.acquireStatement
       var var4:Throwable = null
-      try transaction.getOperations.nodeAddLabelWithVersion(this.getId, transaction.tokenWrite.labelGetOrCreateForName(label.name),version)
+      try transaction.getOperations.nodeAddLabel(this.getId, transaction.tokenWrite.labelGetOrCreateForName(label.name),version)
       catch {
         case var18: Throwable =>
           var4 = var18
@@ -160,6 +160,34 @@ class DynamicNodeProxyM2 (spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(
   /*def getVersionLabels(version: Long): LabelSet = {
     Labels.from(this.getVersionLabels().filter(x => x._2 == version).keys.asJava)
   }*/
+  def getVersionLabels():Map[Label,Long] = {
+    val transaction = this.safeAcquireTransaction
+    val nodes = transaction.ambientNodeCursor
+
+    try {
+      val ignore = this.spi.statement
+      var var4 : Throwable = null
+      try {
+        this.singleNode(transaction, nodes)
+        val labelSet = nodes.versionLabels()
+        val tokenRead = transaction.tokenRead
+        labelSet.asScala.map(x =>(Label.label(tokenRead.nodeLabelName(x._1.toInt)),x._2.toLong)).toMap
+
+      } catch {
+        case var18: Throwable =>
+          //var4 = var18
+          throw var18
+      } finally if (ignore != null) if (var4 != null ) try ignore.close()
+      catch {
+        case var17: Throwable =>
+          var4.addSuppressed(var17)
+      }
+      else ignore.close()
+    } catch {
+      case var20: LabelNotFoundKernelException =>
+        throw new IllegalStateException("Label retrieved through kernel API should exist.", var20)
+    }
+  }
 
   def getVersionLabels(version:Long): Array[Label] ={
     val transaction = this.safeAcquireTransaction
@@ -190,5 +218,8 @@ class DynamicNodeProxyM2 (spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(
     }
   }
 
+ // override def addLabel(label: Label): Unit = this.setVersionLabel(label,this.safeAcquireTransaction.asInstanceOf[KernelTransactionImplementation].getVersion)
+
+  //override def setProperty(key: String, value: Any): Unit = this.setVersionProperty(key,value,this.safeAcquireTransaction.asInstanceOf[KernelTransactionImplementation].getVersion)
 
 }

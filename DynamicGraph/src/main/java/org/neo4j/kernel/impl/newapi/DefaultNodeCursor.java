@@ -200,7 +200,8 @@ class DefaultNodeCursor implements NodeCursor {
     public boolean next() {
         boolean hasChanges = this.hasChanges();
         if (hasChanges && this.addedNodes.hasNext()) {
-            this.storeCursor.setCurrent(this.addedNodes.next());
+            //this.storeCursor.setCurrent(this.addedNodes.next());
+            this.storeCursor.setCurrent(this.addedNodes.next(),this.read.ktx.getLastTransactionIdWhenStarted());
             return true;
         } else {
             do {

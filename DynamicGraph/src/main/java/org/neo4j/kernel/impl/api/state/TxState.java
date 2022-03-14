@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 
+import cn.DynamicGraph.Common.DGVersion;
 import com.sun.istack.internal.Nullable;
 import org.eclipse.collections.api.block.procedure.primitive.LongProcedure;
 import org.eclipse.collections.api.iterator.LongIterator;
@@ -303,21 +304,59 @@ public class TxState implements TransactionState, Home {
     }
 
     public void nodeDoChangeProperty(long nodeId, int propertyKeyId, Value newValue) {
-        this.getOrCreateNodeState(nodeId).changeProperty(propertyKeyId, newValue);
+        NodeStateImpl nodeState = this.getOrCreateNodeState(nodeId);
+        nodeState.changeProperty(propertyKeyId, newValue);
         this.dataChanged();
     }
 
 
     //DynamicGraph method
     //*******************
-
+    public void nodeDoRemoveLabel(long labelId, long nodeId, long version) {
+        //this.getOrCreateLabelStateNodeDiffSets(labelId).remove(nodeId);
+        //this.getOrCreateNodeStateLabelDiffSets(nodeId).remove(labelId);
+        //this.dataChanged();
+        this.nodeDoAddLabel(labelId,nodeId,version);
+    }
 
     @Override
-    public void nodeDoAddLabelWithVersion(long nodeId, long labelId, long version) {
+    public void nodeDoAddLabel(long nodeId, long labelId, long version) {
         this.getOrCreateLabelStateNodeDiffSets(labelId).add(nodeId);
         this.getOrCreateNodeStateLabelDiffSets(nodeId).add(labelId);
         this.getOrCreateNodeStateLabelWithVersionMap(nodeId).put(labelId,version);
         this.dataChanged();
+    }
+
+    @Override
+    public void nodeDoDelete(long nodeId, long version) {
+        this.nodeDoChangeVersion(nodeId,version);
+    }
+
+    @Override
+    public void nodeDoCreate(long id, long version) {
+        this.nodes().add(id);
+        this.getOrCreateNodeState(id).setNodeVersion(version);
+        this.dataChanged();
+    }
+
+    @Override
+    public void relationshipDoCreate(long id, int relationshipTypeId, long startNodeId, long endNodeId, long version) {
+        this.relationships().add(id);
+        if (startNodeId == endNodeId) {
+            this.getOrCreateNodeState(startNodeId).addRelationship(id, relationshipTypeId, RelationshipDirection.LOOP);
+        } else {
+            this.getOrCreateNodeState(startNodeId).addRelationship(id, relationshipTypeId, RelationshipDirection.OUTGOING);
+            this.getOrCreateNodeState(endNodeId).addRelationship(id, relationshipTypeId, RelationshipDirection.INCOMING);
+        }
+
+        this.getOrCreateRelationshipState(id).setMetaData(startNodeId, endNodeId, relationshipTypeId);
+        this.getOrCreateRelationshipState(id).setVersion(version);
+        this.dataChanged();
+    }
+
+    @Override
+    public void relationshipDoDelete(long id, int type, long startNodeId, long endNodeId, long version) {
+        this.relDoChangeVersion(id,version);
     }
 
     public void nodeDoChangeVersion(long nodeId, long version){
@@ -328,6 +367,7 @@ public class TxState implements TransactionState, Home {
     @Override
     public void relDoChangeVersion(long relId, long version) {
         this.getOrCreateRelationshipState(relId).setVersion(version);
+        this.dataChanged();
     }
 
 

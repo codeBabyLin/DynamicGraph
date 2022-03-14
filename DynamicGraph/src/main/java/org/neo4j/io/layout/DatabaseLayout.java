@@ -90,7 +90,20 @@ public class DatabaseLayout {
         return this.file(DatabaseFile.NODE_LABEL_STORE.getName());
     }
 
+    //Dynamic
+    //***********************************************************
+
     public File nodeVersionLabelStore(){return this.file(DatabaseFile.Node_VERSION_LABEL_STORE.getName());}
+
+    public File dbVersionStore(){
+        return this.file(DatabaseFile.DB_VERSION_STORE.getName());
+    }
+    public File idDbVersionStore() {
+        return this.idFile(DatabaseFile.DB_VERSION_STORE.getName());
+    }
+
+    //Dynamic
+    //***********************************************************
 
     public File propertyArrayStore() {
         return this.file(DatabaseFile.PROPERTY_ARRAY_STORE.getName());

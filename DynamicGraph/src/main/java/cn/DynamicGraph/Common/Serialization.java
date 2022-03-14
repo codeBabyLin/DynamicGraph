@@ -1,5 +1,6 @@
 package cn.DynamicGraph.Common;
 
+import cn.DynamicGraph.serialization.MapSerializer;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -8,7 +9,12 @@ import org.eclipse.collections.api.block.procedure.primitive.LongProcedure;
 import org.eclipse.collections.api.set.primitive.MutableLongSet;
 import org.eclipse.collections.impl.map.mutable.primitive.LongLongHashMap;
 
+import java.lang.reflect.Array;
+import java.util.Map;
+
 public class Serialization {
+    ByteBufAllocator allocator  = ByteBufAllocator.DEFAULT;
+
     public static LongLongHashMap readMapFromByteArray(byte[] data){
         ByteBufAllocator allocator  = ByteBufAllocator.DEFAULT;
         ByteBuf byteBuf  = Unpooled.copiedBuffer(data);
@@ -41,4 +47,39 @@ public class Serialization {
         byteBuf.readBytes(data);
         return data;
     }
+    public static byte[] writeMapToByteArray(Map<Integer,Object> llMap){
+
+        ByteBufAllocator allocator  = ByteBufAllocator.DEFAULT;
+        ByteBuf byteBuf  = allocator.heapBuffer();
+        Mapserializer.writeMap(llMap,byteBuf);
+
+        byte [] data = new byte[byteBuf.writerIndex()];
+        byteBuf.readBytes(data);
+        return data;
+    }
+    public static Map<Integer,Object> readJMapFromByteArray( byte[] data){
+
+        ByteBufAllocator allocator  = ByteBufAllocator.DEFAULT;
+        ByteBuf byteBuf  = Unpooled.copiedBuffer(data);
+        Map<Integer,Object> value = Mapserializer.readMap(byteBuf);
+
+        return value;
+    }
+    public static Map<Integer,Object> readJMapFromObject(Object data){
+        if(data.getClass().isArray()){
+            int len = Array.getLength(data);
+            byte [] newData = new byte[len];
+            for(int i = 0;i<len;i++){
+                newData[i] = (byte) Array.get(data,i);
+            }
+            return readJMapFromByteArray(newData);
+        }
+        else{
+            return null;
+        }
+
+
+    }
+
+
 }

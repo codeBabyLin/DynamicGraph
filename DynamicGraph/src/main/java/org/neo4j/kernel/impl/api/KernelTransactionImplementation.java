@@ -151,6 +151,13 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     private volatile Map<String, Object> userMetaData;
     private final Operations operations;
     private final Lock terminationReleaseLock = new ReentrantLock();
+    //Dynamicgraph
+    //**********************************
+    //private long startVersion;
+    //private long endVersion;
+    private long version;
+    //Dynamicgraph
+    //**********************************
 
     public KernelTransactionImplementation(Config config, StatementOperationParts statementOperations, SchemaWriteGuard schemaWriteGuard, TransactionHooks hooks, ConstraintIndexCreator constraintIndexCreator, Procedures procedures, TransactionHeaderInformationFactory headerInformationFactory, TransactionCommitProcess commitProcess, TransactionMonitor transactionMonitor, AuxiliaryTransactionStateManager auxTxStateManager, Pool<KernelTransactionImplementation> pool, Clock clock, AtomicReference<CpuClock> cpuClockRef, AtomicReference<HeapAllocation> heapAllocationRef, TransactionTracer transactionTracer, LockTracer lockTracer, PageCursorTracerSupplier cursorTracerSupplier, StorageEngine storageEngine, AccessCapability accessCapability, AutoIndexing autoIndexing, ExplicitIndexStore explicitIndexStore, VersionContextSupplier versionContextSupplier, CollectionsFactorySupplier collectionsFactorySupplier, ConstraintSemantics constraintSemantics, SchemaState schemaState, IndexingService indexingService, TokenHolders tokenHolders, Dependencies dataSourceDependencies) {
         this.schemaWriteGuard = schemaWriteGuard;
@@ -208,6 +215,22 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     }
     //DynamicGraph
     //*****************************************************************************
+    //Dynamicgraph Method
+    //*********************************************************
+    public Operations getOperations(){
+        return this.operations;
+    }
+    //Dynamicgraph Method
+    //*********************************************************
+    @Override
+    public void setVersion(long version) {
+        this.version = version;
+    }
+
+    @Override
+    public long getVersion() {
+        return this.version;
+    }
 
     public long getLastTransactionIdWhenStarted(){
         return this.lastTransactionIdWhenStarted;
@@ -317,6 +340,8 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
     public Map<String, Object> getMetaData() {
         return this.userMetaData;
     }
+
+
 
     public KernelStatement acquireStatement() {
         this.assertTransactionOpen();
@@ -596,13 +621,7 @@ public class KernelTransactionImplementation implements KernelTransaction, TxSta
 
     }
 
-    //Dynamicgraph Method
-    //*********************************************************
-    public Operations getOperations(){
-        return this.operations;
-    }
-    //Dynamicgraph Method
-    //*********************************************************
+
 
 
     public Read dataRead() {
