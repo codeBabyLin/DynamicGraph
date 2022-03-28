@@ -114,7 +114,7 @@ class DynamicNodeProxyM2 (spi:EmbeddedProxySPI, nodeId: Long) extends NodeProxy(
   }
 
 
-  def getNodeVersion(): Long = {
+  override def getNodeVersion(): Long = {
     val transaction = this.safeAcquireTransaction.asInstanceOf[KernelTransactionImplementation]
 
     //println(transaction.getLastTransactionIdWhenStarted)

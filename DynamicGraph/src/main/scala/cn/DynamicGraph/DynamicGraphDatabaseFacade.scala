@@ -60,6 +60,7 @@ class DynamicGraphDatabaseFacade extends GraphDatabaseFacade{
     //print("hello  world")
   }
 
+/*
   override def newRelationshipProxy(id: Long): RelationshipProxy = new RelationshipProxyEx(this,id)
 
   override def newRelationshipProxy(id: Long, startNodeId: Long, typeId: Int, endNodeId: Long): RelationshipProxy = new RelationshipProxyEx(this,id, startNodeId, typeId, endNodeId)
@@ -67,8 +68,9 @@ class DynamicGraphDatabaseFacade extends GraphDatabaseFacade{
   override def newNodeProxy(nodeId: Long): DynamicNodeProxyM2 = {
     new DynamicNodeProxyM2(this,nodeId)
   }
+*/
 
-  override def commitVersion(version: Long, isInuse: Boolean): Boolean = {
+/*  override def commitVersion(version: Long, isInuse: Boolean): Boolean = {
     this.getTransactionIdStore().transactionCommit(version,isInuse)
-  }
+  }*/
 }

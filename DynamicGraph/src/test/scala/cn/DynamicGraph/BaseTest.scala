@@ -6,6 +6,7 @@ import org.junit.{After, Before}
 import org.neo4j.graphdb.GraphDatabaseService
 
 class BaseTest {
+  val path = "F:\\DynamicGraphStore"
   def registerShutdownHook(graphDb: GraphDatabaseService): Unit ={
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       override def run(): Unit = {
@@ -26,12 +27,14 @@ class BaseTest {
 
   @Before
   def init(): Unit ={
-    val path = "F:\\DynamicGraphStore"
+    //val path = "F:\\DynamicGraphStore"
     delfile(new File(path))
 
   }
   @After
   def close(): Unit ={
-    //graphDb.shutdown()
+    if(graphDb!=null) {
+      graphDb.shutdown()
+    }
   }
 }

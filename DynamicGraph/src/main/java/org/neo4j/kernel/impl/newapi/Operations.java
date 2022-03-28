@@ -23,11 +23,7 @@ import org.neo4j.internal.kernel.api.exceptions.KernelException;
 import org.neo4j.internal.kernel.api.exceptions.TransactionFailureException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernelException;
 import org.neo4j.internal.kernel.api.exceptions.explicitindex.ExplicitIndexNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException;
-import org.neo4j.internal.kernel.api.exceptions.schema.CreateConstraintFailureException;
-import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotApplicableKernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.IndexNotFoundKernelException;
-import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException;
+import org.neo4j.internal.kernel.api.exceptions.schema.*;
 import org.neo4j.internal.kernel.api.exceptions.schema.ConstraintValidationException.Phase;
 import org.neo4j.internal.kernel.api.exceptions.schema.SchemaKernelException.OperationContext;
 import org.neo4j.internal.kernel.api.schema.IndexProviderDescriptor;
@@ -36,6 +32,7 @@ import org.neo4j.internal.kernel.api.schema.RelationTypeSchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.SchemaDescriptor;
 import org.neo4j.internal.kernel.api.schema.constraints.ConstraintDescriptor;
 import org.neo4j.internal.kernel.api.security.AccessMode;
+import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.exceptions.index.IndexEntryConflictException;
 import org.neo4j.kernel.api.exceptions.schema.AlreadyConstrainedException;
@@ -689,10 +686,16 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
         } else {
             this.autoIndexing.nodes().propertyChanged(this, node, propertyKey, existingValue, value);
 
-            if (propertyHasChanged(existingValue,value)) {
+            if (propertyHasChanged(existingValue,value) || true) {
                 //DynamicGraph
                 //Map<Integer,Object> data = Serialization.readJMapFromObject(existingValue.asObjectCopy());
                 addNewValue(value.asObjectCopy(),pMap);
+                //******************************************
+                if(pMap.size()>10){
+
+                }
+                //******************************************
+
                 //DynamicGraph
                 Value newValue = Values.of(Serialization.writeMapToByteArray(pMap));
                 this.ktx.txState().nodeDoChangeProperty(node, propertyKey, newValue);
@@ -704,6 +707,19 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
             return existingValue;
         }
     }
+  /*  private void hah(){
+        int propertyKeyId;
+        String key = "hahah";
+        try {
+            propertyKeyId = this.ktx.tokenWrite().propertyKeyGetOrCreateForName(key);
+        } catch (IllegalTokenNameException var23) {
+            throw new IllegalArgumentException(String.format("Invalid property key '%s'.", key), var23);
+        }
+        this.ktx.txState().nodeDoAddProperty();
+        //this.ktx.tokenWrite().propertyKeyGetOrCreateForName("ss");
+    }*/
+
+
     private void removeCurrentValue(Map<Integer, Object> data){
         int keyCur = getCurrentKey(data);
         Object valCur = data.get(keyCur);
@@ -958,7 +974,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
 
         while(this.propertyCursor.next()) {
             if (this.propertyCursor.propertyKey() == propertyKey) {
-                existingValue = this.propertyCursor.propertyValue();
+                existingValue = this.propertyCursor.propertyValue(1,true);
                 break;
             }
         }
@@ -972,7 +988,7 @@ public class Operations implements Write, ExplicitIndexWrite, SchemaWrite {
 
         while(this.propertyCursor.next()) {
             if (this.propertyCursor.propertyKey() == propertyKey) {
-                existingValue = this.propertyCursor.propertyValue();
+                existingValue = this.propertyCursor.propertyValue(1,true);
                 break;
             }
         }

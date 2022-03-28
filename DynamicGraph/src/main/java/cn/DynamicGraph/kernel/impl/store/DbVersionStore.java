@@ -57,12 +57,26 @@ public class DbVersionStore extends CommonAbstractStore<DbVersionRecord, NoStore
         return res;
     }
 
+
+    public long[] getNextVersions(long versionCount){
+        long versions[] = new long[(int) versionCount];
+        for(int i = 0;i< versionCount;i++){
+            versions[i] = this.getNextVersion();
+        }
+        return versions;
+    }
+    public boolean transactionsCommit(long ids[]){
+        for(int i =0 ;i<ids.length;i++){
+            this.transactionCommit(ids[i]);
+        }
+        return true;
+    }
+
     public boolean transactionCommit(long id){
         DbVersionRecord record = new DbVersionRecord(id);
         record.initialize(true,0);
         updateRecord(record);
         return true;
-
     }
     public boolean transactionCommit(long id, boolean isSuccessCommit){
         DbVersionRecord record = new DbVersionRecord(id);
@@ -71,7 +85,6 @@ public class DbVersionStore extends CommonAbstractStore<DbVersionRecord, NoStore
         return true;
 
     }
-
 
     public boolean transactionCommit(long id,long value  ,long nodeCounts,long relCounts){
         DbVersionRecord record = new DbVersionRecord(id);

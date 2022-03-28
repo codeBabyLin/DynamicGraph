@@ -56,9 +56,9 @@ class RelationshipVersionTest {
 
 
 
-    var r1 = node1.createRelationshipTo(node2,relType).asInstanceOf[RelationshipProxyEx]
+    var r1 = node1.createRelationshipTo(node2,relType)
     val re1Id = r1.getId
-    r1.setRelVersion(100)
+    //r1.setRelVersion(100)
 
     //r1.setVersionProeprty("year","2022",1001)
    // r1.setVersionProeprty("year","2077",10086)
@@ -68,9 +68,9 @@ class RelationshipVersionTest {
 
 
     tx = graphDb.beginTx()
-    r1 = graphDb.getRelationshipById(re1Id).asInstanceOf[RelationshipProxyEx]
+    r1 = graphDb.getRelationshipById(re1Id)
    // println(r1.getVersionProperty("year",10086))
-    println(r1.getVersion)
+    println(r1.getRelVersion)
 
 
 

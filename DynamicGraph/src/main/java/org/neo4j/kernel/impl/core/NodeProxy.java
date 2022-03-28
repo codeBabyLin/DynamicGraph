@@ -1,17 +1,14 @@
-package cn.DynamicGraph.kernel.impl.core;
-
 //
 // Source code recreated from a .class file by IntelliJ IDEA
 // (powered by Fernflower decompiler)
 //
 
+package org.neo4j.kernel.impl.core;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+
+import cn.DynamicGraph.Common.DGVersion;
+import cn.DynamicGraph.Common.Serialization;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -45,17 +42,15 @@ import org.neo4j.kernel.api.SilentTokenNameLookup;
 import org.neo4j.kernel.api.Statement;
 import org.neo4j.kernel.api.exceptions.Status;
 import org.neo4j.kernel.api.exceptions.Status.Transaction;
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
-import org.neo4j.kernel.impl.core.RelationshipProxy;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
 
-public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
+public class NodeProxy implements Node, RelationshipFactory<Relationship> {
     private final EmbeddedProxySPI spi;
     private final long nodeId;
 
-    public NodeProxyEx(EmbeddedProxySPI spi, long nodeId) {
+    public NodeProxy(EmbeddedProxySPI spi, long nodeId) {
         this.nodeId = nodeId;
         this.spi = spi;
     }
@@ -167,24 +162,24 @@ public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
         ResourceIterator<Relationship> rels = this.getRelationships(dir, type).iterator();
         Throwable var4 = null;
 
-        Relationship other;
+        Relationship rel;
         try {
-            Relationship rel;
-            if (!rels.hasNext()) {
-                rel = null;
-                return rel;
-            }
+            if (rels.hasNext()) {
+                rel = (Relationship)rels.next();
 
-            rel = (Relationship)rels.next();
-
-            while(rels.hasNext()) {
-                other = (Relationship)rels.next();
-                if (!other.equals(rel)) {
-                    throw new NotFoundException("More than one relationship[" + type + ", " + dir + "] found for " + this);
+                Relationship other;
+                while(rels.hasNext()) {
+                    other = (Relationship)rels.next();
+                    if (!other.equals(rel)) {
+                        throw new NotFoundException("More than one relationship[" + type + ", " + dir + "] found for " + this);
+                    }
                 }
+
+                other = rel;
+                return other;
             }
 
-            other = rel;
+            rel = null;
         } catch (Throwable var16) {
             var4 = var16;
             throw var16;
@@ -203,7 +198,7 @@ public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
 
         }
 
-        return other;
+        return rel;
     }
 
     public void setProperty(String key, Object value) {
@@ -428,14 +423,82 @@ public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
                 } while(propertyKey != properties.propertyKey());
 
                 Value value = properties.propertyValue();
+                //DynamicGraph
+
+
+                //DynamicGraph
+
+
                 if (value == Values.NO_VALUE) {
                     throw new NotFoundException(String.format("No such property, '%s'.", key));
                 } else {
+                    //DynamicGraph
+                    //Map<Integer,Object> data = Serialization.readJMapFromObject(value.asObjectCopy());
+                    //Object v = getCurrentValue(data);
+                    //DynamicGraph
+                    //return v;
                     return value.asObjectCopy();
                 }
             }
         }
     }
+
+    private Object getVersionValue(Map<Integer,Object> data,long version){
+        int keyMax = -1;
+        Iterator<Integer> it = data.keySet().iterator();
+        while(it.hasNext()){
+            int key = it.next();
+            if(DGVersion.getStartVersion(key) == version) return data.get(key);
+        }
+        return null;
+    }
+    private Object getCurrentValue(Map<Integer,Object> data){
+        int keyMax = -1;
+        Iterator<Integer> it = data.keySet().iterator();
+        while(it.hasNext()){
+            int key = it.next();
+            if(!DGVersion.hasEndVersion(key)) return data.get(key);
+        }
+        return null;
+    }
+    public Object getProperty(String key,long version) throws NotFoundException {
+        if (null == key) {
+            throw new IllegalArgumentException("(null) property key is not allowed");
+        } else {
+            KernelTransaction transaction = this.safeAcquireTransaction();
+            int propertyKey = transaction.tokenRead().propertyKey(key);
+            if (propertyKey == -1) {
+                throw new NotFoundException(String.format("No such property, '%s'.", key));
+            } else {
+                NodeCursor nodes = transaction.ambientNodeCursor();
+                PropertyCursor properties = transaction.ambientPropertyCursor();
+                this.singleNode(transaction, nodes);
+                nodes.properties(properties);
+
+                do {
+                    if (!properties.next()) {
+                        throw new NotFoundException(String.format("No such property, '%s'.", key));
+                    }
+                } while(propertyKey != properties.propertyKey());
+
+                Value value = properties.propertyValue(version);
+
+                if (value == Values.NO_VALUE) {
+                    throw new NotFoundException(String.format("No such property, '%s'.", key));
+                } else {
+                    //DynamicGraph
+                    //Map<Integer,Object> data = Serialization.readJMapFromObject(value.asObjectCopy());
+                    //Object v = getVersionValue(data,version);
+                    //DynamicGraph
+                    //return v;
+                    return value.asObjectCopy();
+                }
+            }
+        }
+    }
+
+
+
 
     public boolean hasProperty(String key) {
         if (null == key) {
@@ -530,47 +593,6 @@ public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
             } catch (InvalidTransactionTypeKernelException var25) {
                 throw new ConstraintViolationException(var25.getMessage(), var25);
             }
-        }
-    }
-
-
-    public void addLabelWithVersion(Label label,long version) {
-        KernelTransaction transaction = this.spi.kernelTransaction();
-
-        try {
-            Statement ignore = transaction.acquireStatement();
-            Throwable var4 = null;
-
-            try {
-                transaction.dataWrite().nodeAddLabel(this.getId(), transaction.tokenWrite().labelGetOrCreateForName(label.name()));
-            } catch (Throwable var18) {
-                var4 = var18;
-                throw var18;
-            } finally {
-                if (ignore != null) {
-                    if (var4 != null) {
-                        try {
-                            ignore.close();
-                        } catch (Throwable var17) {
-                            var4.addSuppressed(var17);
-                        }
-                    } else {
-                        ignore.close();
-                    }
-                }
-
-            }
-
-        } catch (ConstraintValidationException var20) {
-            throw new ConstraintViolationException(var20.getUserMessage(new SilentTokenNameLookup(transaction.tokenRead())), var20);
-        } catch (IllegalTokenNameException var21) {
-            throw new ConstraintViolationException(String.format("Invalid label name '%s'.", label.name()), var21);
-        } catch (TooManyLabelsException var22) {
-            throw new ConstraintViolationException("Unable to add label.", var22);
-        } catch (EntityNotFoundException var23) {
-            throw new NotFoundException("No node with id " + this.getId() + " found.", var23);
-        } catch (KernelException var24) {
-            throw new ConstraintViolationException(var24.getMessage(), var24);
         }
     }
 
@@ -1002,5 +1024,80 @@ public class NodeProxyEx implements Node, RelationshipFactory<Relationship> {
     public Relationship relationship(long id, long startNodeId, int typeId, long endNodeId) {
         return this.spi.newRelationshipProxy(id, startNodeId, typeId, endNodeId);
     }
-}
 
+    //DynamicGraph
+    public long getNodeVersion(){
+        KernelTransaction transaction = this.safeAcquireTransaction();
+        Statement ignore = transaction.acquireStatement();
+        NodeCursor nodes = transaction.ambientNodeCursor();
+        this.singleNode(transaction,nodes);
+        //transaction.dataRead().singleNode(nodeId,nodes);
+        //if (!nodes.next()) throw new NotFoundException(new EntityNotFoundException(EntityType.NODE, nodeId));
+        return nodes.nodeVersion();
+
+    }
+    public Map<Label,Long> getVersionLabel() {
+       /* KernelTransaction transaction = this.safeAcquireTransaction();
+        Statement ignore = transaction.acquireStatement();
+        NodeCursor nodes = transaction.ambientNodeCursor();
+        this.singleNode(transaction,nodes);
+        //this.singleNode(transaction, nodes);
+        Map<Long,Long> labels = nodes.versionLabels();
+        TokenRead tokenRead = transaction.tokenRead();
+        Map<Label,Long> newLabels = new HashMap<>();
+
+        for(Map.Entry<Long,Long> entry: labels.entrySet()) {
+            newLabels.put(tokenRead.nodeLabelName(Math.toIntExact(entry.getKey())), entry.getValue());
+        }
+
+        ArrayList var21 = list;
+        return var21;*/
+
+        KernelTransaction transaction = this.safeAcquireTransaction();
+        NodeCursor nodes = transaction.ambientNodeCursor();
+
+        try {
+            Statement ignore = this.spi.statement();
+            Throwable var4 = null;
+
+            try {
+                this.singleNode(transaction, nodes);
+                Map<Long,Long> labelMap = nodes.versionLabels();
+                //LabelSet labelSet = nodes.labels();
+                TokenRead tokenRead = transaction.tokenRead();
+                Map<Label,Long> newLabels = new HashMap<>();
+                //ArrayList<Label> list = new ArrayList(labelSet.numberOfLabels());
+
+                for(Map.Entry<Long,Long> entry: labelMap.entrySet()) {
+                    newLabels.put(Label.label(tokenRead.nodeLabelName(Math.toIntExact(entry.getKey()))), entry.getValue());
+                }
+
+                //ArrayList var21 = list;
+                return newLabels;
+            } catch (Throwable var18) {
+                var4 = var18;
+                throw var18;
+            } finally {
+                if (ignore != null) {
+                    if (var4 != null) {
+                        try {
+                            ignore.close();
+                        } catch (Throwable var17) {
+                            var4.addSuppressed(var17);
+                        }
+                    } else {
+                        ignore.close();
+                    }
+                }
+
+            }
+        } catch (LabelNotFoundKernelException var20) {
+            throw new IllegalStateException("Label retrieved through kernel API should exist.", var20);
+        }
+
+
+    }
+
+    //DynamicGraph
+
+}

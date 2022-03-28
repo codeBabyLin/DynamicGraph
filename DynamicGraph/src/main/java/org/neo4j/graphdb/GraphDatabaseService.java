@@ -7,6 +7,8 @@ package org.neo4j.graphdb;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import cn.DynamicGraph.graphdb.VersionGraphDatabaseService;
 import org.neo4j.graphdb.event.KernelEventHandler;
 import org.neo4j.graphdb.event.TransactionEventHandler;
 import org.neo4j.graphdb.index.IndexManager;
@@ -14,20 +16,9 @@ import org.neo4j.graphdb.schema.Schema;
 import org.neo4j.graphdb.traversal.BidirectionalTraversalDescription;
 import org.neo4j.graphdb.traversal.TraversalDescription;
 
-public interface GraphDatabaseService {
+public interface GraphDatabaseService extends VersionGraphDatabaseService {
 
-    //DynamicGraph
-    //*******************************
 
-    long [] listAllVersions();
-    long getCurrentVersion();
-    void seekVersion(long version);
-    long getNextVersion();
-    boolean commitVersion(long version, boolean isInuse);
-    Transaction beginTx(long version);
-
-    //DynamicGraph
-    //*******************************
 
     Node createNode();
 

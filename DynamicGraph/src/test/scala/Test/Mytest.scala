@@ -1,5 +1,9 @@
 package Test
 
+import java.text.SimpleDateFormat
+import java.util
+import java.util.{Calendar, Date}
+
 import cn.DynamicGraph.Common.DGVersion
 import io.netty.buffer.{ByteBuf, ByteBufAllocator, Unpooled}
 import org.junit.{Assert, Test}
@@ -103,5 +107,85 @@ class Mytest extends{
     val hj = byteBuf.readByte().toInt
     println(hj)
   }
+  def getDateOff(format: String,date1Str: String,date2Str: String):Int = {
+    val simpleDateFormat = new SimpleDateFormat(format)
+
+    val date1 =simpleDateFormat.parse(date1Str)
+    val date2 = simpleDateFormat.parse(date2Str)
+    val calender:Calendar = Calendar.getInstance()
+    val calender2:Calendar = Calendar.getInstance()
+    calender.setTime(date1)
+    calender2.setTime(date2)
+
+    var dateStr = s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)+1}.${calender.get(Calendar.DATE)}"
+    var dayCount: Int = 0
+    while(!calender.equals(calender2)) {
+      dateStr = s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)+1}.${calender.get(Calendar.DATE)}"
+      //dateArray.update(dayCount,dateStr)
+      dayCount = dayCount+1
+      calender.add(Calendar.DATE,1)
+    }
+    dayCount
+  }
+  def getDateOffArray(format: String,date1Str: String,date2Str: String,dayOff: Int):Array[String] = {
+    val simpleDateFormat = new SimpleDateFormat(format)
+
+    val date1 =simpleDateFormat.parse(date1Str)
+    val date2 = simpleDateFormat.parse(date2Str)
+    val calender:Calendar = Calendar.getInstance()
+    val calender2:Calendar = Calendar.getInstance()
+    calender.setTime(date1)
+    calender2.setTime(date2)
+
+
+    val dateArray:Array[String] = new Array[String](dayOff)
+    var dayCount: Int = 0
+
+    while(!calender.equals(calender2)) {
+      val str = calender.getTime.formatted(format)
+      val dateStr = s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)+1}.${calender.get(Calendar.DATE)}"
+      dateArray.update(dayCount,dateStr)
+      dayCount = dayCount+1
+      calender.add(Calendar.DATE,1)
+    }
+
+    dateArray
+
+  }
+
+
+  @Test
+  def testDate(): Unit ={
+
+    val simpleDateFormat = new SimpleDateFormat("yyyy.MM.dd")
+
+    val date1 =simpleDateFormat.parse("2021.12.21")
+    val date2 = simpleDateFormat.parse("2022.3.22")
+    val calender:Calendar = Calendar.getInstance()
+    val calender2:Calendar = Calendar.getInstance()
+    calender.setTime(date1)
+    calender2.setTime(date2)
+
+    var dateStr = s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)+1}.${calender.get(Calendar.DATE)}"
+    val endateStr = "2022.3.22"
+    val dateArray:Array[String] = new Array[String](91)
+    var dayCount: Int = 0
+
+    while(!calender.equals(calender2)) {
+      dateStr = s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)+1}.${calender.get(Calendar.DATE)}"
+      //val str = calender.getTime.toString
+      println(dateStr)
+      dateArray.update(dayCount,dateStr)
+      dayCount = dayCount+1
+      calender.add(Calendar.DATE,1)
+    }
+
+
+   // println(s"${calender.get(Calendar.YEAR)}.${calender.get(Calendar.MONTH)}.${calender.get(Calendar.DATE)}")
+
+
+  }
+
+
 
 }

@@ -1,5 +1,6 @@
 import cn.DynamicGraph.Common.BaseSerializer;
 import cn.DynamicGraph.Common.Serialization;
+import cn.DynamicGraph.kernel.impl.store.DbVersionStore;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import org.junit.Test;
@@ -52,8 +53,18 @@ public class myTest {
         byte[] bt = Serialization.writeMapToByteArray(data);
         Map<Integer,Object> x = Serialization.readJMapFromByteArray(bt);
         Object nk = x;
+        Class zc = DbVersionStore.class;
 
 
+    }
+
+    @Test
+    public void testkl(){
+       /* boolean x = ({
+                boolean z = true;
+                boolean y = false;
+                boolean c = true;
+                })*/
     }
 
 }

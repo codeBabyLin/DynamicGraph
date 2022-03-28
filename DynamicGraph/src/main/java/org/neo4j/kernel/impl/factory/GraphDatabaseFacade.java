@@ -16,6 +16,9 @@ import java.util.NoSuchElementException;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
+
+import cn.DynamicGraph.Common.DGVersion;
+import cn.DynamicGraph.kernel.impl.store.DbVersionStore;
 import org.neo4j.function.Suppliers;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.DependencyResolver;
@@ -115,6 +118,7 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
     private TransactionalContextFactory contextFactory;
     private Config config;
     private TokenHolders tokenHolders;
+    private DbVersionStore dbVersionStore;
 
     public GraphDatabaseFacade() {
     }
@@ -147,6 +151,17 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
     //DynamicGraph
     //*************************************************************
 
+    private DbVersionStore getTransactionIdStore(){
+        if(this.dbVersionStore == null){
+            Class clazz1 = DbVersionStore.class;
+            Iterable stores = this.getDependencyResolver().resolveTypeDependencies(clazz1);
+            this.dbVersionStore = (DbVersionStore) stores.iterator().next();
+        }
+
+        //DbVersionStore txIdStore = (DbVersionStore)
+        return this.dbVersionStore;
+    }
+
     public Transaction beginTx(long version) {
         return this.beginTransaction(version,Type.explicit, LoginContext.AUTH_DISABLED);
     }
@@ -170,12 +185,20 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
 
     @Override
     public long[] listAllVersions() {
-        return new long[0];
+        long[] versions = new long[0];
+        try {
+            versions = this.getTransactionIdStore().listAllVersionsSuccessCommited();
+        }
+        catch (Exception e){
+
+        }
+
+        return versions;
     }
 
     @Override
     public long getCurrentVersion() {
-        return 0;
+       return this.getTransactionIdStore().getCurrentHighestVersion();
     }
 
     @Override
@@ -185,12 +208,22 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
 
     @Override
     public long getNextVersion() {
-        return 0;
+        return this.getTransactionIdStore().getNextVersion();
+    }
+
+    @Override
+    public long[] getNextVersions(long versionCount) {
+        return this.getTransactionIdStore().getNextVersions(versionCount);
+    }
+
+    @Override
+    public boolean commitVersions(long[] versions) {
+        return false;
     }
 
     @Override
     public boolean commitVersion(long version, boolean isInuse) {
-        return false;
+        return this.getTransactionIdStore().transactionCommit(version,isInuse);
     }
 
 
@@ -415,7 +448,17 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
     }
 
     public Transaction beginTx() {
-        return this.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED);
+
+        //DynamicGraph
+        InternalTransaction transaction = this.beginTransaction(Type.explicit, LoginContext.AUTH_DISABLED);
+        //transaction.setVersion(DGVersion.setStartEndVersion(this.getNextVersion,65535))
+        transaction.setVersion(DGVersion.setStartVersion(this.getNextVersion()));
+        //val func = (e:java.lang.Long,l:java.lang.Boolean) => this.commitVersion(e,l)
+        //transaction.setFunction(func)
+        transaction.setVersionstore(this.getTransactionIdStore());
+
+        //DynamicGraph
+        return transaction;
     }
 
     public Transaction beginTx(long timeout, TimeUnit unit) {
@@ -463,6 +506,14 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
             return new PrefetchingResourceIterator<Node>() {
                 protected Node fetchNextOrNull() {
                     if (cursor.next()) {
+                        //DynamicGraph
+                        while(DGVersion.hasEndVersion(cursor.nodeVersion())){
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                        }
+                        //DynamicGraph
                         return GraphDatabaseFacade.this.newNodeProxy(cursor.nodeReference());
                     } else {
                         this.close();
@@ -488,6 +539,15 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
             return new PrefetchingResourceIterator<Relationship>() {
                 protected Relationship fetchNextOrNull() {
                     if (cursor.next()) {
+                        //DynamicGraph
+                        while(DGVersion.hasEndVersion(cursor.relVersion())){
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                        }
+                        //DynamicGraph
+
                         return GraphDatabaseFacade.this.newRelationshipProxy(cursor.relationshipReference(), cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference());
                     } else {
                         this.close();
@@ -910,6 +970,249 @@ public class GraphDatabaseFacade implements GraphDatabaseAPI, EmbeddedProxySPI {
             throw new TransactionTerminatedException(terminationReason);
         }
     }
+
+    //VersionGraphService
+    //******************************************************************
+
+    @Override
+    public ResourceIterable<Node> getAllNodesInSingleVersion(long version) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final NodeCursor cursor = ktx.cursors().allocateNodeCursor();
+            ktx.dataRead().allNodesScan(cursor);
+            return new PrefetchingResourceIterator<Node>() {
+                protected Node fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                        while(DGVersion.getStartVersion(cursor.nodeVersion()) >= version || DGVersion.getEndVersion(cursor.nodeVersion()) < version){
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                        }
+                        //DynamicGraph
+                        return GraphDatabaseFacade.this.newNodeProxy(cursor.nodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+       // return null;
+    }
+
+    @Override
+    public ResourceIterable<Relationship> getAllRelationshipsInSingleVersion(long version) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final RelationshipScanCursor cursor = ktx.cursors().allocateRelationshipScanCursor();
+            ktx.dataRead().allRelationshipsScan(cursor);
+            return new PrefetchingResourceIterator<Relationship>() {
+                protected Relationship fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                        while(DGVersion.getStartVersion(cursor.relVersion()) >= version || DGVersion.getEndVersion(cursor.relVersion()) < version){
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                        }
+                        //DynamicGraph
+
+                        return GraphDatabaseFacade.this.newRelationshipProxy(cursor.relationshipReference(), cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+    }
+
+    @Override
+    public ResourceIterable<Node> getAllNodesInVersionDelta(long startVersion, long endVersion) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final NodeCursor cursor = ktx.cursors().allocateNodeCursor();
+            ktx.dataRead().allNodesScan(cursor);
+            return new PrefetchingResourceIterator<Node>() {
+                protected Node fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                     /*   while( DGVersion.getStartVersion(cursor.nodeVersion()) < startVersion
+                                || DGVersion.getStartVersion(cursor.nodeVersion()) >= endVersion
+                               || DGVersion.getEndVersion(cursor.nodeVersion()) < startVersion
+                               || (DGVersion.getEndVersion(cursor.nodeVersion()) >= endVersion && !DGVersion.hasEndVersion(cursor.nodeVersion()))) {
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                        }*/
+                     //DynamicGraph
+                     long cursorStartVersion = DGVersion.getStartVersion(cursor.nodeVersion());
+                     long cursorEndVersion = DGVersion.getEndVersion(cursor.nodeVersion());
+                        while(!((cursorStartVersion >= startVersion && cursorStartVersion < endVersion) || (cursorEndVersion >= startVersion && cursorEndVersion < endVersion))) {
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                            cursorStartVersion = DGVersion.getStartVersion(cursor.nodeVersion());
+                            cursorEndVersion = DGVersion.getEndVersion(cursor.nodeVersion());
+                        }
+                        //DynamicGraph
+                        return GraphDatabaseFacade.this.newNodeProxy(cursor.nodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+        // return null;
+    }
+
+    @Override
+    public ResourceIterable<Relationship> getAllRelationshipsInVersionDelta(long startVersion, long endVersion) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final RelationshipScanCursor cursor = ktx.cursors().allocateRelationshipScanCursor();
+            ktx.dataRead().allRelationshipsScan(cursor);
+            return new PrefetchingResourceIterator<Relationship>() {
+                protected Relationship fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                        long cursorStartVersion = DGVersion.getStartVersion(cursor.relVersion());
+                        long cursorEndVersion = DGVersion.getEndVersion(cursor.relVersion());
+                        while(!((cursorStartVersion >= startVersion && cursorStartVersion < endVersion) || (cursorEndVersion >= startVersion && cursorEndVersion < endVersion))) {
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                            cursorStartVersion = DGVersion.getStartVersion(cursor.relVersion());
+                            cursorEndVersion = DGVersion.getEndVersion(cursor.relVersion());
+                        }
+                        //DynamicGraph
+
+                        return GraphDatabaseFacade.this.newRelationshipProxy(cursor.relationshipReference(), cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+    }
+
+    @Override
+    public ResourceIterable<Node> getAllNodesInVersions(long startVersion, long endVersion) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final NodeCursor cursor = ktx.cursors().allocateNodeCursor();
+            ktx.dataRead().allNodesScan(cursor);
+            return new PrefetchingResourceIterator<Node>() {
+                protected Node fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                        long cursorStartVersion = DGVersion.getStartVersion(cursor.nodeVersion());
+                        long cursorEndVersion = DGVersion.getEndVersion(cursor.nodeVersion());
+                        while(!(cursorStartVersion < startVersion && cursorEndVersion >= endVersion)) {
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                            cursorStartVersion = DGVersion.getStartVersion(cursor.nodeVersion());
+                            cursorEndVersion = DGVersion.getEndVersion(cursor.nodeVersion());
+                        }
+                        //DynamicGraph
+                        return GraphDatabaseFacade.this.newNodeProxy(cursor.nodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+    }
+
+    @Override
+    public ResourceIterable<Relationship> getAllRelationshipsInVersions(long startVersion, long endVersion) {
+        KernelTransaction ktx = this.statementContext.getKernelTransactionBoundToThisThread(true);
+        assertTransactionOpen(ktx);
+        return () -> {
+            final Statement statement = ktx.acquireStatement();
+            final RelationshipScanCursor cursor = ktx.cursors().allocateRelationshipScanCursor();
+            ktx.dataRead().allRelationshipsScan(cursor);
+            return new PrefetchingResourceIterator<Relationship>() {
+                protected Relationship fetchNextOrNull() {
+                    if (cursor.next()) {
+                        //DynamicGraph
+                        long cursorStartVersion = DGVersion.getStartVersion(cursor.relVersion());
+                        long cursorEndVersion = DGVersion.getEndVersion(cursor.relVersion());
+                        while(!(cursorStartVersion < startVersion && cursorEndVersion >= endVersion)) {
+                            if(!cursor.next()){
+                                this.close();
+                                return null;
+                            }
+                            cursorStartVersion = DGVersion.getStartVersion(cursor.relVersion());
+                            cursorEndVersion = DGVersion.getEndVersion(cursor.relVersion());
+                        }
+                        //DynamicGraph
+
+                        return GraphDatabaseFacade.this.newRelationshipProxy(cursor.relationshipReference(), cursor.sourceNodeReference(), cursor.type(), cursor.targetNodeReference());
+                    } else {
+                        this.close();
+                        return null;
+                    }
+                }
+
+                public void close() {
+                    cursor.close();
+                    statement.close();
+                }
+            };
+        };
+    }
+
+
+    //******************************************************************
+    //VersionGraphService
+
 
     private interface NodeFactory {
         NodeProxy make(long var1);

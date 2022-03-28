@@ -61,7 +61,8 @@ public class GraphDatabaseFacadeFactory {
     //Dynamicgraph method
     //*******************
     public GraphDatabaseFacade newFacade(File storeDir, Config config, GraphDatabaseFacadeFactory.Dependencies dependencies) {
-        return this.initFacade(storeDir, config, dependencies, new DynamicGraphDatabaseFacade());
+        //return this.initFacade(storeDir, config, dependencies, new DynamicGraphDatabaseFacade());
+        return this.initFacade(storeDir, config, dependencies, new GraphDatabaseFacade());
     }
 
     //Dynamicgraph method

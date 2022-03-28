@@ -1,18 +1,14 @@
-package cn.DynamicGraph;
-
 //
 // Source code recreated from a .class file by IntelliJ IDEA
 // (powered by Fernflower decompiler)
 //
 
+package org.neo4j.kernel.impl.core;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
-import cn.DynamicGraph.serialization.Value2Byte;
+import cn.DynamicGraph.Common.DGVersion;
+import cn.DynamicGraph.Common.Serialization;
 import org.neo4j.graphdb.ConstraintViolationException;
 import org.neo4j.graphdb.DatabaseShutdownException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -31,38 +27,29 @@ import org.neo4j.internal.kernel.api.exceptions.explicitindex.AutoIndexingKernel
 import org.neo4j.internal.kernel.api.exceptions.schema.IllegalTokenNameException;
 import org.neo4j.kernel.api.KernelTransaction;
 import org.neo4j.kernel.api.Statement;
-import org.neo4j.kernel.impl.api.KernelTransactionImplementation;
-import org.neo4j.kernel.impl.core.EmbeddedProxySPI;
-import org.neo4j.kernel.impl.core.RelationshipProxy;
 import org.neo4j.storageengine.api.EntityType;
 import org.neo4j.storageengine.api.RelationshipVisitor;
 import org.neo4j.values.storable.Value;
 import org.neo4j.values.storable.Values;
-import scala.Int;
-import scala.collection.JavaConversions;
-import scala.collection.JavaConverters.*;
-import scala.collection.mutable.HashTable;
 
-public class RelationshipProxyEx extends RelationshipProxy {
+public class RelationshipProxy implements Relationship, RelationshipVisitor<RuntimeException> {
     private final EmbeddedProxySPI spi;
     private long id = -1L;
     private long startNode = -1L;
     private long endNode = -1L;
     private int type;
 
-    public RelationshipProxyEx(EmbeddedProxySPI spi, long id, long startNode, int type, long endNode) {
-        super(spi,id,startNode,type,endNode);
+    public RelationshipProxy(EmbeddedProxySPI spi, long id, long startNode, int type, long endNode) {
         this.spi = spi;
-        this.visit2(id, type, startNode, endNode);
+        this.visit(id, type, startNode, endNode);
     }
 
-    public RelationshipProxyEx(EmbeddedProxySPI spi, long id) {
-        super(spi,id);
+    public RelationshipProxy(EmbeddedProxySPI spi, long id) {
         this.spi = spi;
         this.id = id;
     }
 
-    public void visit2(long id, int type, long startNode, long endNode) throws RuntimeException {
+    public final void visit(long id, int type, long startNode, long endNode) throws RuntimeException {
         this.id = id;
         this.type = type;
         this.startNode = startNode;
@@ -106,6 +93,15 @@ public class RelationshipProxyEx extends RelationshipProxy {
         } else {
             return true;
         }
+    }
+
+    @Override
+    public long getRelVersion() {
+        KernelTransaction transaction = this.spi.kernelTransaction();
+        Statement ignore = transaction.acquireStatement();
+        RelationshipScanCursor relationships = transaction.ambientRelationshipCursor();
+        this.singleRelationship(transaction,relationships);
+        return relationships.relVersion();
     }
 
     public long getId() {
@@ -299,6 +295,65 @@ public class RelationshipProxyEx extends RelationshipProxy {
                 if (value == Values.NO_VALUE) {
                     throw new NotFoundException(String.format("No such property, '%s'.", key));
                 } else {
+                    //DynamicGraph
+                   // Map<Integer,Object> data = Serialization.readJMapFromObject(value.asObjectCopy());
+                   // Object v = getCurrentValue(data);
+                    //DynamicGraph
+                   // return v;
+                    return value.asObjectCopy();
+                }
+            }
+        }
+    }
+
+    private Object getVersionValue(Map<Integer,Object> data,long version){
+        int keyMax = -1;
+        Iterator<Integer> it = data.keySet().iterator();
+        while(it.hasNext()){
+            int key = it.next();
+            if(DGVersion.getStartVersion(key) == version) return data.get(key);
+        }
+        return null;
+    }
+    private Object getCurrentValue(Map<Integer,Object> data){
+        int keyMax = -1;
+        Iterator<Integer> it = data.keySet().iterator();
+        while(it.hasNext()){
+            int key = it.next();
+            if(!DGVersion.hasEndVersion(key)) return data.get(key);
+        }
+        return null;
+    }
+    @Override
+    public Object getProperty(String key, long version) {
+        if (null == key) {
+            throw new IllegalArgumentException("(null) property key is not allowed");
+        } else {
+            KernelTransaction transaction = this.spi.kernelTransaction();
+            int propertyKey = transaction.tokenRead().propertyKey(key);
+            if (propertyKey == -1) {
+                throw new NotFoundException(String.format("No such property, '%s'.", key));
+            } else {
+                RelationshipScanCursor relationships = transaction.ambientRelationshipCursor();
+                PropertyCursor properties = transaction.ambientPropertyCursor();
+                this.singleRelationship(transaction, relationships);
+                relationships.properties(properties);
+
+                do {
+                    if (!properties.next()) {
+                        throw new NotFoundException(String.format("No such property, '%s'.", key));
+                    }
+                } while(propertyKey != properties.propertyKey());
+
+                Value value = properties.propertyValue(version);
+                if (value == Values.NO_VALUE) {
+                    throw new NotFoundException(String.format("No such property, '%s'.", key));
+                } else {
+                    //DynamicGraph
+                    //Map<Integer,Object> data = Serialization.readJMapFromObject(value.asObjectCopy());
+                    //Object v = getVersionValue(data,version);
+                    //DynamicGraph
+                    //return v;
                     return value.asObjectCopy();
                 }
             }
@@ -478,94 +533,4 @@ public class RelationshipProxyEx extends RelationshipProxy {
             throw new NotFoundException(new EntityNotFoundException(EntityType.RELATIONSHIP, this.id));
         }
     }
-    //Dynamicgraph
-    //*****************************************************************
-
-    public long getVersion(){
-        KernelTransactionImplementation transaction = (KernelTransactionImplementation)this.spi.kernelTransaction();
-        return transaction.getOperations().relGetVersion(this.id);
-    }
-    public void setRelVersion(long version) {
-        KernelTransactionImplementation transaction = (KernelTransactionImplementation)this.spi.kernelTransaction();
-
-        //int propertyKeyId;
-      /*  try {
-            propertyKeyId = transaction.tokenWrite().propertyKeyGetOrCreateForName(key);
-        } catch (IllegalTokenNameException var21) {
-            throw new IllegalArgumentException(String.format("Invalid property key '%s'.", key), var21);
-        }*/
-
-        try {
-            Statement ignore = transaction.acquireStatement();
-            Throwable var6 = null;
-
-            try {
-                //transaction.dataWrite().relationshipSetProperty(this.id, propertyKeyId, Values.of(value, false));
-                transaction.getOperations().relSetVersion(this.id,version);
-            } catch (Throwable var20) {
-                var6 = var20;
-                throw var20;
-            } finally {
-                if (ignore != null) {
-                    if (var6 != null) {
-                        try {
-                            ignore.close();
-                        } catch (Throwable var19) {
-                            var6.addSuppressed(var19);
-                        }
-                    } else {
-                        ignore.close();
-                    }
-                }
-
-            }
-
-        } catch (IllegalArgumentException var23) {
-            this.spi.failTransaction();
-            throw var23;
-        } catch (EntityNotFoundException var24) {
-            throw new NotFoundException(var24);
-        }
-    }
-
-
-
-    public void setVersionProeprty(String key,Object value, long version){
-        Object value1 = null;
-        try {
-            value1 = this.getProperty(key);
-        }
-        catch (Exception e){
-
-        }
-        finally {
-            scala.collection.mutable.HashMap<Object,Object> prop = null;
-            if(value1 != null){
-                prop = new scala.collection.mutable.HashMap((HashTable.Contents) Value2Byte.read((byte [])value1).toIterable());
-            }
-            else{
-                prop = new scala.collection.mutable.HashMap<Object,Object>();
-            }
-            prop.put((int) version,value);
-            //this.setProperty(key,Value2Byte.write(new scala.collection.immutable.HashMap(prop.toSeq())));
-        }
-        //scala.collection.mutable.Map[Int,]
-       /* Map<Integer, Object> prop = new HashMap<>();
-        if(value1 != null) prop = (Map<Integer, Object>) Value2Byte.read((byte [])value1);
-        prop.put((int) version,value);
-        this.setProperty(key,Value2Byte.write((scala.collection.immutable.Map<Object, Object>) prop));*/
-    }
-
-   public Object getVersionProperty(String key,long version){
-        Object temp = this.getProperty(key);
-        scala.collection.immutable.Map<Object, Object> prop = Value2Byte.read((byte[])temp);
-        return prop.get(version);
-   }
-
-
-
-    //Dynamicgraph
-    //*****************************************************************
-
-
 }
