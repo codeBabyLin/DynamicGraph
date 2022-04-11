@@ -6,8 +6,19 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="DynamicGraph" />
+        <module name="DynamicGraphNeo4j" />
+        <module name="DynamicGraphtool" />
+        <module name="DynamicGraphkernelapi" />
+        <module name="DynamicGraphDataLoad" />
+        <module name="DynamicGraphkernel" />
+        <module name="DynamicGraphIO" />
+        <module name="DynamicGraphCommon" />
+        <module name="DynamicGraphServer" />
+        <module name="DynamicGraphgraphdbapi" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="DynamicGraphneo4j" target="1.8" />
+    </bytecodeTargetLevel>
   </component>
 </project>

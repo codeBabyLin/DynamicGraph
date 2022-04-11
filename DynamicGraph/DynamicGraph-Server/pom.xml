@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>DynamicGraph</groupId>
+  <artifactId>DynamicGraph-Server</artifactId>
+  <version>1.0-SNAPSHOT</version>
+
+  <properties>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <version>4.11</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server</artifactId>
+      <version>3.5.6</version>
+      <exclusions>
+        <exclusion>
+          <artifactId>neo4j</artifactId>
+          <groupId>org.neo4j</groupId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-graphdb-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-kernel</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-kernel-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.neo4j</groupId>
+          <artifactId>neo4j-io</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.neo4j.client</groupId>
+          <artifactId>neo4j-browser</artifactId>
+        </exclusion>
+
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>DynamicGraph</groupId>
+      <artifactId>DynamicGraph-DataLoad</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>DynamicGraph</groupId>
+      <artifactId>DynamicGraph-Neo4j</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+    <dependency>
+      <groupId>DynamicGraph</groupId>
+      <artifactId>DynamicGraph-graphdb-api</artifactId>
+      <version>1.0-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>unpack</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>unpack</goal>
+            </goals>
+            <configuration>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.neo4j.app</groupId>
+                  <artifactId>neo4j-server</artifactId>
+                  <overWrite>false</overWrite>
+                  <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                </artifactItem>
+              </artifactItems>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+    </plugins>
+  </build>
+
+</project>

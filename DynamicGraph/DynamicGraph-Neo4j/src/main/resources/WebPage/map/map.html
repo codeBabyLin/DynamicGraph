@@ -1,0 +1,63 @@
+<html>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<script type="text/javascript" src="raphael.js"></script> 
+<script type="text/javascript" src="chinamapPath.js"></script> 
+<script type="text/javascript" src="draw.js"></script> 
+<script type="text/javascript" src="dateChange.js"></script>
+<script type="text/javascript" src="Onload.js"></script>
+<head>
+ 
+</head>
+
+<body>
+<div id = "gaga">
+    <span>省份：</span>
+    <span id="name">0</span>
+
+    <span>行政代码：</span>
+    <span id="code">0</span>
+
+    <span>日期：</span>
+    <span id="date">0</span>
+
+    <span>确诊：</span>
+    <span id="confirmedSum">0</span>
+
+    <span>治愈：</span>
+    <span id="curedSum">0</span>
+
+    <span>死亡：</span>
+    <span id="diedSum">0</span>
+
+    <span>新增确诊：</span>
+    <span id="newConfirmed">0</span>
+
+    <span>新增本地：</span>
+    <span id="newConfirmedLocal">0</span>
+    <style type="text/css">
+div {
+	position:absolute;
+	top:10%;
+	left:40%;
+	margin:-150px 0 0 -200px;
+	}
+</style>
+</div>
+ <div id ="map">
+
+ <input id="range" type="range" min="0" max="100" value="5"step="1" oninput="change()" onchange="change()">
+		<span id="value">0</span>
+		
+ </div>
+ <style type="text/css">
+div {
+	position:absolute;
+	top:40%;
+	left:40%;
+	margin:-150px 0 0 -200px;
+	}
+</style>
+
+</body>
+
+</html>

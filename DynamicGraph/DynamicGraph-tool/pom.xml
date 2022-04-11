@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>DynamicGraph</artifactId>
+        <groupId>DynamicGraph</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>DynamicGraph-tool</artifactId>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>DynamicGraph</groupId>
+            <artifactId>DynamicGraph-Server</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+       <!-- <dependency>
+
+            <groupId>org.neo4j.app</groupId>
+
+            <artifactId>neo4j-server</artifactId>
+
+            <version>3.5.6</version>
+
+        </dependency>-->
+    </dependencies>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>assemble</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+               <!--     &lt;!&ndash;lib下直接存放jar，没有路径文件夹（如com/apache)，如果没有这个选项则放在lib下的jar包会被com/apache类似的多层文件夹包裹起来&ndash;&gt;
+                    &lt;!&ndash;           >mvn clean package appassembler:assemble -Dmaven.test.skip=true
+
+                    mvn package assembly:single -Dmaven.test.skip=true&ndash;&gt;-->
+                    <repositoryLayout>flat</repositoryLayout>
+                    <configurationDirectory>conf</configurationDirectory>
+                    <configurationSourceDirectory>${project.basedir}/src/main/resources</configurationSourceDirectory>
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                    <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+              <!--      &lt;!&ndash;生成的项目的目录位置，这里的client是项目的名称，你可以根据你的需要自己随便命名&ndash;&gt;-->
+                    <assembleDirectory>${project.build.directory}/DynamicGraph</assembleDirectory>
+                <!--    &lt;!&ndash;java启动参数&ndash;&gt;-->
+                    <extraJvmArguments>-Xms128m</extraJvmArguments>
+                    <binFileExtensions>
+                        <unix>.sh</unix>
+                    </binFileExtensions>
+                    <platforms>
+                        <platform>windows</platform>
+                        <platform>unix</platform>
+                    </platforms>
+                    <repositoryName>lib</repositoryName>
+                    <programs>
+                        <program>
+                           <!-- &lt;!&ndash;指定主类，脚本名。会生成shell/bat两种类型,也可用platforms指定运行平台&ndash;&gt;-->
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                          <!--  &lt;!&ndash; 生成的脚本文件的名称，比如start.sh,你也可以根据你的需要命名成其他名字 &ndash;&gt;-->
+                            <name>start</name>
+                        </program>
+                    </programs>
+                </configuration>
+            </plugin>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           <!-- <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>2.1.0</version>
+                <configuration>
+                    <platforms>
+                        <platform>unix</platform>
+                        <platform>windows</platform>
+                    </platforms>
+                &lt;!&ndash;    包的存放路劲&ndash;&gt;
+                    <assembleDirectory>${project.build.directory}/DynamicGraph</assembleDirectory>
+                    <target>${project.build.directory}/DynamicGraph</target>
+                    <repositoryName>lib</repositoryName>
+                   &lt;!&ndash; &lt;!&ndash;启动脚本目录&ndash;&gt;&ndash;&gt;
+                    <binFolder>bin</binFolder>
+                 &lt;!&ndash;   &lt;!&ndash;配置文件路径&ndash;&gt;&ndash;&gt;
+                    <configurationDirectory>conf</configurationDirectory>
+                 &lt;!&ndash;   &lt;!&ndash;是否copy配置文件&ndash;&gt;&ndash;&gt;
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                  &lt;!&ndash;  &lt;!&ndash;从哪里copy配置文件&ndash;&gt;&ndash;&gt;
+                    <configurationSourceDirectory>DynamicGraph-tool/src/main/resources</configurationSourceDirectory>
+                    <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+                    <binFileExtensions>
+                        <unix>.sh</unix>
+                        <windows>.bat</windows>
+                    </binFileExtensions>
+                   &lt;!&ndash;flag 表示直接将jar放到lib 里面&ndash;&gt;
+                    <repositoryLayout>flat</repositoryLayout>
+                    <encoding>UTF-8</encoding>
+                    <logsDirectory>logs</logsDirectory>
+                    <tempDirectory>tmp</tempDirectory>
+                    <daemons>
+                        <daemon>
+                            <id>start</id>
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                            <platforms>
+                                <platform>jsw</platform>
+                            </platforms>
+                            &lt;!&ndash;可以通过generatorConfigurations 设置脚本平台&ndash;&gt;
+                            <generatorConfigurations>
+                                <generatorConfiguration>
+                                    <generator>DynamicGraph</generator>
+                                    <includes>
+                                        <include>linux-x86-32</include>
+                                        <include>linux-x86-64</include>
+                                        <include>windows-x86-32</include>
+                                        <include>windows-x86-64</include>
+                                    </includes>
+                                </generatorConfiguration>
+                            </generatorConfigurations>
+                            <jvmSettings>
+                                <extraArguments>
+                                    <extraArgument>-server</extraArgument>
+                                    <extraArgument>-Xms256M</extraArgument>
+                                    <extraArgument>-Xmx256M</extraArgument>
+                                    <extraArgument>-Xss512k</extraArgument>
+                                    <extraArgument>-Xloggc:logs/demo_gc.log</extraArgument>
+                                    <extraArgument>-verbose:gc</extraArgument>
+                                    <extraArgument>-XX:+HeapDumpOnOutOfMemoryError</extraArgument>
+                                    <extraArgument>-XX:HeapDumpPath=logs/java_heapdump.hprof</extraArgument>
+                                </extraArguments>
+                                >
+                            </jvmSettings>
+                        </daemon>
+                    </daemons>
+
+                    <programs>
+                        <program>
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                            <id>demoApp</id>
+                            <name>startDG</name>
+
+                        </program>
+                    </programs>
+                </configuration>
+            </plugin>-->
+
+        <!--    &lt;!&ndash;//mvn clean package appassembler:generate-daemons -Dmaven.test.skip=true&ndash;&gt;-->
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>3.2.1</version>
+                <executions>
+                    <execution>
+                        <id>scala-compile-first</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+
+
+</project>

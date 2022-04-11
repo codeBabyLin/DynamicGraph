@@ -6,9 +6,239 @@
 
     <groupId>DynamicGraph</groupId>
     <artifactId>DynamicGraph</artifactId>
+    <packaging>pom</packaging>
     <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <!--<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>-->
+    </properties>
+<!--    <properties>
+
+
+    </properties>-->
+    <modules>
+        <module>DynamicGraph-Common</module>
+        <module>DynamicGraph-Server</module>
+        <module>DynamicGraph-kernel</module>
+        <module>DynamicGraph-tool</module>
+        <module>DynamicGraph-DataLoad</module>
+        <module>DynamicGraph-IO</module>
+        <module>DynamicGraph-kernel-api</module>
+        <module>DynamicGraph-Neo4j</module>
+        <module>DynamicGraph-graphdb-api</module>
+    </modules>
+
+
+
+<!--
     <build>
         <plugins>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>scala-maven-plugin</artifactId>
+                <version>3.2.1</version>
+                <executions>
+                    <execution>
+                        <id>scala-compile-first</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>1.2.1</version>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>assemble</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    &lt;!&ndash;lib下直接存放jar，没有路径文件夹（如com/apache)，如果没有这个选项则放在lib下的jar包会被com/apache类似的多层文件夹包裹起来&ndash;&gt;
+         &lt;!&ndash;           >mvn clean package appassembler:assemble -Dmaven.test.skip=true
+
+                    mvn package assembly:single -Dmaven.test.skip=true&ndash;&gt;
+                    <repositoryLayout>flat</repositoryLayout>
+                    <configurationDirectory>conf</configurationDirectory>
+                    <configurationSourceDirectory>DynamicGraph-kernel/src/main/resources</configurationSourceDirectory>
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                    <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+                    &lt;!&ndash;生成的项目的目录位置，这里的client是项目的名称，你可以根据你的需要自己随便命名&ndash;&gt;
+                    <assembleDirectory>${project.build.directory}/DynamicGraph</assembleDirectory>
+                    &lt;!&ndash;java启动参数&ndash;&gt;
+                    <extraJvmArguments>-Xms128m</extraJvmArguments>
+                    <binFileExtensions>
+                        <unix>.sh</unix>
+                    </binFileExtensions>
+                    <platforms>
+                        <platform>windows</platform>
+                        <platform>unix</platform>
+                    </platforms>
+                    <repositoryName>lib</repositoryName>
+                    <programs>
+                        <program>
+                            &lt;!&ndash;指定主类，脚本名。会生成shell/bat两种类型,也可用platforms指定运行平台&ndash;&gt;
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                            &lt;!&ndash; 生成的脚本文件的名称，比如start.sh,你也可以根据你的需要命名成其他名字 &ndash;&gt;
+                            <name>start</name>
+                        </program>
+                    </programs>
+                </configuration>
+            </plugin>
+
+
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>appassembler-maven-plugin</artifactId>
+                <version>2.1.0</version>
+                <configuration>
+                    <platforms>
+                        <platform>unix</platform>
+                        <platform>windows</platform>
+                    </platforms>
+                    &lt;!&ndash;包的存放路劲&ndash;&gt;
+                    <assembleDirectory>${project.build.directory}/DynamicGraph</assembleDirectory>
+                    <repositoryName>lib</repositoryName>
+                    &lt;!&ndash;启动脚本目录&ndash;&gt;
+                    <binFolder>bin</binFolder>
+                    &lt;!&ndash;配置文件路径&ndash;&gt;
+                    <configurationDirectory>conf</configurationDirectory>
+                    &lt;!&ndash;是否copy配置文件&ndash;&gt;
+                    <copyConfigurationDirectory>true</copyConfigurationDirectory>
+                    &lt;!&ndash;从哪里copy配置文件&ndash;&gt;
+                    <configurationSourceDirectory>DynamicGraph-kernel/src/main/resources</configurationSourceDirectory>
+                    <includeConfigurationDirectoryInClasspath>true</includeConfigurationDirectoryInClasspath>
+                    <binFileExtensions>
+                        <unix>.sh</unix>
+                        <windows>.bat</windows>
+                    </binFileExtensions>
+                    &lt;!&ndash;flag 表示直接将jar放到lib 里面&ndash;&gt;
+                    <repositoryLayout>flat</repositoryLayout>
+                    <encoding>UTF-8</encoding>
+                    <logsDirectory>logs</logsDirectory>
+                    <tempDirectory>tmp</tempDirectory>
+                    <daemons>
+                        <daemon>
+                            <id>demo</id>
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                            <platforms>
+                                <platform>jsw</platform>
+                            </platforms>
+                            &lt;!&ndash;可以通过generatorConfigurations 设置脚本平台&ndash;&gt;
+                            <generatorConfigurations>
+                                <generatorConfiguration>
+                                    <generator>jsw</generator>
+                                    <includes>
+                                        <include>linux-x86-32</include>
+                                        <include>linux-x86-64</include>
+                                        <include>windows-x86-32</include>
+                                        <include>windows-x86-64</include>
+                                    </includes>
+                                </generatorConfiguration>
+                            </generatorConfigurations>
+                            <jvmSettings>
+                                <extraArguments>
+                                    <extraArgument>-server</extraArgument>
+                                    <extraArgument>-Xms256M</extraArgument>
+                                    <extraArgument>-Xmx256M</extraArgument>
+                                    <extraArgument>-Xss512k</extraArgument>
+                                    <extraArgument>-Xloggc:logs/demo_gc.log</extraArgument>
+                                    <extraArgument>-verbose:gc</extraArgument>
+                                    <extraArgument>-XX:+HeapDumpOnOutOfMemoryError</extraArgument>
+                                    <extraArgument>-XX:HeapDumpPath=logs/java_heapdump.hprof</extraArgument>
+                                </extraArguments>
+                                >
+                            </jvmSettings>
+                        </daemon>
+                    </daemons>
+
+                    <programs>
+                        <program>
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                            <id>demoApp</id>
+                        </program>
+                    </programs>
+                </configuration>
+            </plugin>
+
+            &lt;!&ndash;//mvn clean package appassembler:generate-daemons -Dmaven.test.skip=true&ndash;&gt;
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+
+                       &lt;!&ndash;         <artifactItem>
+                                    <groupId>org.neo4j</groupId>
+                                    <artifactId>neo4j</artifactId>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                                </artifactItem>
+
+                                <artifactItem>
+                                    <groupId>org.neo4j.app</groupId>
+                                    <artifactId>neo4j-server</artifactId>
+                                    <overWrite>false</overWrite>
+                                    <outputDirectory>${project.build.directory}/classes</outputDirectory>
+                                </artifactItem>&ndash;&gt;
+
+
+
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
+
+&lt;!&ndash;
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>cn.DynamicGraph.BootStrap.DGStarter</mainClass>
+                        </manifest>
+                    </archive>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                </configuration>
+                &lt;!&ndash; mvn package | mvn install &ndash;&gt;
+                &lt;!&ndash; mvn package assembly:single -Dmaven.test.skip=true&ndash;&gt;
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>&ndash;&gt;
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -18,14 +248,36 @@
                 </configuration>
             </plugin>
         </plugins>
-    </build>
+    </build>-->
 
-    <dependencies>
+
+   <!-- <dependencies>
         <dependency>
             <groupId>org.neo4j</groupId>
             <artifactId>neo4j</artifactId>
             <version>3.5.6</version>
         </dependency>
+        <dependency>
+            <groupId>org.neo4j.client</groupId>
+            <artifactId>neo4j-browser</artifactId>
+            <version>3.2.25</version>
+        </dependency>
+
+        <dependency>
+
+            <groupId>org.neo4j.app</groupId>
+
+            <artifactId>neo4j-server</artifactId>
+
+            <version>3.5.6</version>
+
+        </dependency>
+        <dependency>
+            <groupId>org.neo4j.driver</groupId>
+            <artifactId>neo4j-java-driver</artifactId>
+            <version>1.5.0</version>
+        </dependency>
+
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -45,6 +297,20 @@
         </dependency>
 
 
+    </dependencies>-->
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.1</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <version>2.11.7</version>
+        </dependency>
     </dependencies>
 
 </project>
